@@ -73,6 +73,7 @@ subroutine writeheader
   ! Write the header information
   !*****************************
 
+  flexversion(11:13) = 'MCH'  !meteoswiss: indicate additional output
   if (ldirect.eq.1) then
     write(unitheader) ibdate,ibtime, flexversion
   else
@@ -104,6 +105,9 @@ subroutine writeheader
     write(unitheader) 1,'WD_'//species(i)(1:7)
     write(unitheader) 1,'DD_'//species(i)(1:7)
     write(unitheader) numzgrid,species(i)
+    write(unitheader) decay(i),weta_gas(i),wetb_gas(i),reldiff(i),henry(i),f0(i),&   !meteoswiss
+                      density(i),dquer(i),dsigma(i),dryvel(i),&                      !meteoswiss
+                      weightmolar(i),ohcconst(i),ohdconst(i),ohnconst(i),vsetaver(i) !meteoswiss
   end do
 
   ! Write information on release points: total number, then for each point:

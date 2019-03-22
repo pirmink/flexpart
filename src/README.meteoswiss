@@ -1,0 +1,45 @@
+Flexpart
+========
+
+Compilation
+-----------
+
+Use the script make.meteoswiss to build the application. The appropriate modules
+for the GNU programming environment are loaded by the script:
+
+./make.meteoswiss
+
+This script makes use the original makefile as provided with Flexpart. The use
+of the specific definitions needed for the CSCS environment is enforced in the
+script with the help of the '--environment-overrides' option. This options to
+'make' gives precedence to the environment variables that are set in the script
+prior to calling 'make', thereby overriding the settings in the makefile itself.
+
+Arguments to the make.meteoswiss script are forwarded to 'make'. This can be
+used to add a target, as for example the 'clean' target:
+
+./make.meteoswiss clean
+
+For compilation of serial FLEXPART (see header of makefile)
+
+./make.meteoswiss serial
+
+For compilation of parallel FLEXPART (see header of makefile)
+
+./make.meteoswiss mpi
+
+For compilation of debugging parallel FLEXPART (see header of makefile)
+
+./make.meteoswiss mpi-dbg
+
+
+Commands to run the compiled executable:
+
+# To run flexpart, it is necessary to unlimit the stacksize
+ulimit -s unlimited
+
+# Run flexpart
+./FP_ecmwf_gfortran
+
+# A script for the preparation of the input files from the MeteoSwiss archive is
+# available in ../test/test-run. Use it with option -h to get a short help.

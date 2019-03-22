@@ -413,7 +413,6 @@ subroutine readreleases
   numpartmax=0
   releaserate=0.
 101 numpoint=numpoint+1
-
   if (readerror.lt.1) then ! reading namelist format
 
     if (numpoint.gt.numpoints) goto 250
@@ -572,6 +571,9 @@ subroutine readreleases
         ireleasestart(numpoint)=int((jul1-bdate)*86400.)
         ireleaseend(numpoint)=int((jul2-bdate)*86400.)
       else
+        write(*,*) 'FLEXPART MODEL WARNING'
+        write(*,*) 'Too few particles to randomize release,'
+        write(*,*) 'release time set to mid-point of release interval'
         ireleasestart(numpoint)=int((julm-bdate)*86400.)
         ireleaseend(numpoint)=int((julm-bdate)*86400.)
       endif

@@ -92,14 +92,18 @@ program flexpart
   !*******************************************************
 
   inline_options='none'
-  select case (iargc())
+!MeteoSwiss  select case (iargc())
+  select case (command_argument_count())  !MeteoSwiss: Fortran standard intrinsic procedure
   case (2)
-    call getarg(1,arg1)
+!MeteoSwiss    call getarg(1,arg1)
+    call get_command_argument(1,arg1)     !MeteoSwiss: Fortran standard intrinsic procedure
     pathfile=arg1
-    call getarg(2,arg2)
+!MeteoSwiss    call getarg(2,arg2)
+    call get_command_argument(2,arg2)     !MeteoSwiss: Fortran standard intrinsic procedure
     inline_options=arg2
   case (1)
-    call getarg(1,arg1)
+!MeteoSwiss    call getarg(1,arg1)
+    call get_command_argument(1,arg1)     !MeteoSwiss: Fortran standard intrinsic procedure
     pathfile=arg1
     if (arg1(1:1).eq.'-') then
       write(pathfile,'(a11)') './pathnames'

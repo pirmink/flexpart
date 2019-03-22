@@ -120,6 +120,10 @@ subroutine gridcheck_ecmwf
   !
   ! OPENING OF DATA FILE (GRIB CODE)
   !
+
+  write(*,*) 'Reading: '//path(3)(1:length(3)) &        !meteoswiss
+         //trim(wfname(ifn))                            !meteoswiss
+
 5 call grib_open_file(ifile,path(3)(1:length(3)) &
        //trim(wfname(ifn)),'r',iret)
   if (iret.ne.GRIB_SUCCESS) then
@@ -435,7 +439,8 @@ subroutine gridcheck_ecmwf
   endif
 
   nuvz=iumax
-  nwz =iwmax
+!meteoswiss  nwz =iwmax
+  nwz =iwmax !still needed?! + 1        !meteoswiss
   if(nuvz.eq.nlev_ec) nwz=nlev_ec+1
 
   if (nuvz+1.gt.nuvzmax) then
