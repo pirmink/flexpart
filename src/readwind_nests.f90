@@ -380,14 +380,14 @@ subroutine readwind_nests(indj,n,uuhn,vvhn,wwhn)
     stop
   endif
 
-  if(levdiff2.eq.0) then
-    iwmax=nlev_ec+1
+!  if(levdiff2.eq.0) then
+    iwmax=iwmax+1
     do i=0,nxn(l)-1
       do j=0,nyn(l)-1
-        wwhn(i,j,nlev_ec+1,l)=0.
+        wwhn(i,j,iwmax,l)=0.
       end do
     end do
-  endif
+!  endif
 
   do i=0,nxn(l)-1
     do j=0,nyn(l)-1

@@ -347,7 +347,7 @@ subroutine gridcheck_nests
 
   nuvzn=iumax
 !meteoswiss  nwzn=iwmax
-  nwzn=iwmax !still needed?! + 1       !meteoswiss
+  nwzn=iwmax + 1       !meteoswiss
   if(nuvzn.eq.nlev_ec) nwzn=nlev_ecn+1
 
   if ((nuvzn.gt.nuvzmax).or.(nwzn.gt.nwzmax)) then

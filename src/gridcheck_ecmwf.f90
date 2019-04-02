@@ -440,7 +440,7 @@ subroutine gridcheck_ecmwf
 
   nuvz=iumax
 !meteoswiss  nwz =iwmax
-  nwz =iwmax !still needed?! + 1        !meteoswiss
+  nwz =iwmax + 1        !meteoswiss
   if(nuvz.eq.nlev_ec) nwz=nlev_ec+1
 
   if (nuvz+1.gt.nuvzmax) then

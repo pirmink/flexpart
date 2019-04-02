@@ -16,7 +16,7 @@
 # Author: Pirmin Kaufmann, MeteoSwiss
 #
 # Version:
-  revision=1.4   #vincr# version number, may be incremented using vincr
+  revision=1.5   #vincr# version number, may be incremented using vincr
 #
 # See git log for history of modifications
 #-============================================================================
@@ -675,7 +675,7 @@ EOF
 fi
 
 # Add full command to logfile
-logline="$0 $args # $tag $basetime $fc_range $mode $rel_tag"
+logline="$0 $args # $job_name # $tag $basetime $fc_range $mode $rel_tag"
 logline="$logline --average=$avg_h --exe=$exe_path/$fp_exe --exe-tag=$exe_tag --partition=$partition --resol=$resol"
 logline="$logline --rel-mass=$rel_mass --rel-time=$t1,$t2 --job=$job_name --source-no=$source_no # $source_desc"
 if [[ -z $dry_run ]] ; then

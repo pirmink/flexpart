@@ -10,10 +10,10 @@ dispers_resources=/users/kaufmann/src/oprtools/dispersion/resources
 #debug_opt=--debug
 
 # Domains (see ls $dispers_resources/cities_*.txt for available domains)
-domains=( envelope zoom )
+domains=( envelope ) # zoom )
 
 # Levels/fields to plot
-fieldlevels=( CONC_1 ) # DEPO )
+fieldlevels=( CONC ) # CONC_1 ) # DEPO )
 
 # Formats (ps, gif, png)
 formats=( ps )
