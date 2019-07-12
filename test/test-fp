@@ -51,7 +51,7 @@ job_file=job
 # Job logfile
 job_out=job.log
 # Landuse file
-landuse=/store/s83/flexpart_data/IGBP_int1.dat
+landuse=/store/mch/msopr/flexpart_data/IGBP_int1.dat
 
 # Defaults for arguments
 # ----------------------
@@ -71,7 +71,8 @@ resol=h05
 # Flexpart executable (-e, --exe-tag)
 # should agree with Makefile variables EXEDIR, EXECUTABLE
 exe_path=$(dirname $PWD)/src
-fp_exe=FLEXPART
+fp_exe_serial=FLEXPART
+fp_exe_parallel=FLEXPART_MPI
 # Flexpart option (one of -v -v2 -i -i2) and argument (name of pathfile)
 fp_opt=-v2
 # Release start and end (h, relative to basetime) (-t, --rel-time)
@@ -79,11 +80,16 @@ t1=0
 t2=8
 # Averaging interval and output frequency (-a, --average)
 avg_h=3
+# Species number
+species_no=16 # Cs-137
 # Total released mass (-m, --rel-mass)
 rel_mass=1.0E09
+# Run mode serial or parallel
+run_mode=serial
 # Partition (-p, --partition)
 # On kesch/escha: one of postproc, pp-long, pp-serial
-partition=pp-serial
+partition_serial=pp-serial
+partition_parallel=postproc
 
 #=============================================================================
 # Functions
@@ -120,13 +126,17 @@ Options:
   -h, --help           show this help and exit
   -j, --job=NAME       manually set job name (default: consecutive number)
   -n, --dry-run        print commands without executing them
+      --parallel       run parallel code
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
   -r, --resol=RESOL    resolution, one of h1 or h05 (default: $resol)
   -m, --rel-mass=M     released mass [Bq] (default: $rel_mass)
   -t, --rel-time=T1,T2 release from T1 to T2 (lead times [hours]).
                        (Default: $t1,$t2)
-  -s, --stop           stop script before starting job (do not submit job)
+      --run-mode=MODE  run code in MODE, either serial or parallel
   -S, --source-no=N    select source no N from list of NWP data sources
+      --species-no=N   select species no N according to definition
+                       in SPECIES directory
+  -s, --stop           stop script before starting job (do not submit job)
   -V, --version        output version information and exit
   -x, --exe=EXE        Flexpart executable 
                        (Default: $exe_path/$fp_exe)
@@ -202,8 +212,24 @@ while (( $# > 0 )) ; do
 		(( $# > 1 )) && shift && resol="$1"
 	    fi
 	    ;;
+	--run-mode*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		run_mode="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && run_mode="$1"
+	    fi
+	    ;;
 	-s | --stop)
 	    no_submit=yes
+	    ;;
+	--species-no*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		species_no="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && species_no="$1"
+	    fi
 	    ;;
 	-t | --rel-time*)
 	    # Mandatory option argument with or without =
@@ -314,6 +340,12 @@ case $resol in
 	;;
 esac
 
+# Option --partition
+if [[ -z $partition ]] ; then
+    # Default depends on run_mode
+    eval partition=\$partition_$run_mode
+fi
+
 # Prepare job
 # -----------
 # Job directory
@@ -332,6 +364,10 @@ fi
 $exe_cmd ln -sf $job_root .
 
 # Executable
+if [[ -z $fp_exe ]] ; then
+    # Default depends on run_mode
+    eval fp_exe=\$fp_exe_$run_mode
+fi
 if [[ -n $exe_tag ]] ; then
     fp_exe=${fp_exe}_$exe_tag
 fi
@@ -496,7 +532,7 @@ $exe_cmd mkdir -p $flex_input/SPECIES
 
 # Copy input files
 echo $tag: "Copying input files from: ${input_templates}"
-echo -n $tag: "Copying: "
+echo -n $tag: "Copying:"
 for f in AGECLASSES RECEPTORS \
 	    surfdata.t surfdepo.t ; do
     echo -n " $f,"
@@ -508,7 +544,8 @@ for f in AGECLASSES RECEPTORS \
     fi
     $exe_cmd cp $input_templates/$f $flex_input
 done
-echo -n " SPECIES (directory),"
+echo    " SPECIES (directory)"
+echo -n $tag: "Copying:"
 if [ ! -d $input_templates/SPECIES ] ; then
     echo
     echo $tag: "Required SPECIES directory not found: $input_templates/SPECIES"
@@ -549,16 +586,17 @@ else
 fi
 
 # Outgrid
-[[ -z $exe_cmd ]] && echo -n " OUTGRID --> OUTGRID" #dbg
-if [ -f $input_templates/OUTGRID ] ; then #dbg
-    $exe_cmd cp $input_templates/OUTGRID $flex_input/OUTGRID #dbg
-#dbg [[ -z $exe_cmd ]] && echo -n " OUTGRID.$resol --> OUTGRID"
-#dbg if [ -f $input_templates/OUTGRID.$resol ] ; then
-#dbg    $exe_cmd cp $input_templates/OUTGRID.$resol $flex_input/OUTGRID
+#noresol: no resolution dependent OURGRID files
+#noresol [[ -z $exe_cmd ]] && echo -n " OUTGRID.$resol --> OUTGRID"
+#noresol if [ -f $input_templates/OUTGRID.$resol ] ; then
+#noresol    $exe_cmd cp $input_templates/OUTGRID.$resol $flex_input/OUTGRID
+[[ -z $exe_cmd ]] && echo -n " OUTGRID --> OUTGRID"          #noresol
+if [ -f $input_templates/OUTGRID ] ; then                    #noresol
+    $exe_cmd cp $input_templates/OUTGRID $flex_input/OUTGRID #noresol
 else
     echo
     echo "$tag: Cannot find template file for specified model resolution:" \
-	$input_templates/OUTGRID #dbg .$resol
+	$input_templates/OUTGRID #noresol .$resol
     exit 15
 fi
 echo
@@ -631,10 +669,19 @@ $exe_cmd gres "IDATE2 *=.*, !" \
 $exe_cmd gres "ITIME2 *=.*, !" \
     "ITIME2  =         ${release_end[1]}, !"\
     $flex_input/RELEASES
+# Species number
+echo $tag: "      Species number: $(printf "%9.3E" $species_no)"
+$exe_cmd gres "SPECNUM_REL *=.*, !" " SPECNUM_REL=$(printf "%11d" $species_no), !" \
+    $flex_input/RELEASES
 # Total mass emitted
 echo $tag: "  Total mass emitted: $(printf "%9.3E" $rel_mass)"
 $exe_cmd gres "MASS *=.*, !" "MASS    =$(printf "%15.4E" $rel_mass), !" \
     $flex_input/RELEASES
+
+# Parallel execution
+if [[ $run_mode == parallel ]] ; then
+    parallel_opt='--ntasks=8'
+fi
 
 # Write job file
 # --------------
@@ -647,6 +694,7 @@ if [[ -z $dry_run ]] ; then
 #SBATCH --error=$start_location/$job_out
 #SBATCH --partition=$partition
 #SBATCH --time=4:00:00
+#SBATCH $parallel_opt
 
 # Initialization
 ulimit -s unlimited
@@ -661,6 +709,8 @@ ulimit -a
 # Run flexpart
 # ------------
 # Load needed modules
+echo loading module PE/17.06
+module load PE/17.06
 echo loading module PrgEnv-gnu
 module load PrgEnv-gnu
 echo loading module netcdf-fortran
@@ -669,7 +719,7 @@ echo loading module grib_api
 module load grib_api
 
 # Run FLEXPART in case directory
-srun --kill-on-bad-exit ./$fp_exe $fp_opt
+srun --kill-on-bad-exit $parallel_opt ./$fp_exe $fp_opt
 EOF
 
 fi
@@ -695,7 +745,7 @@ fi
 $exe_cmd sbatch $start_location/$job_file
 
 # Report full command
-echo $tag: "Completed comand:"
+echo $tag: "Completed command:"
 echo "$logline"
 
 exit
