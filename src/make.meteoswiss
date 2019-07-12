@@ -7,11 +7,12 @@
 # makefile itself is ensured with the option --environment-overrides to the
 # "make" command.
 
+module load PE/17.06
 module load PrgEnv-gnu/17.02
 module load netcdf-fortran/4.4.4-gmvolf-17.02
 module load grib_api/1.13.1-gnu-5.4.0
 
-# Settings in default makefile
+# Settings in makefile provided as part of the release
 #	ROOT_DIR = /homevip/flexpart/
 
 #	F90	  = /usr/bin/gfortran
@@ -23,6 +24,7 @@ module load grib_api/1.13.1-gnu-5.4.0
 
 # Settings for escha/kesch
 # grib_api definitions using variables set by programming environment
+echo GRIBAPI_PATH=$GRIBAPI_PATH
 ##export  INCPATH=${GRIBAPI_PATH}/include
 ##export LIBPATH1=${GRIBAPI_PATH}/lib
 ##export LIBPATH2=${JASPER_PATH}/lib
@@ -46,8 +48,8 @@ export    FUSER='-finit-local-zero -lpthread'
 echo ROOT_DIR=$ROOT_DIR
 echo      F90=$F90
 echo   MPIF90=$MPIF90
-echo INCPATH1=$INCPATH
-echo INCPATH2=$INCPATH
+echo INCPATH1=$INCPATH1
+echo INCPATH2=$INCPATH2
 echo LIBPATH1=$LIBPATH1
 ##echo LIBPATH2=$LIBPATH2
 echo    FUSER=$FUSER
