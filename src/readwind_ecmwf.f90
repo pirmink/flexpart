@@ -120,6 +120,8 @@ subroutine readwind_ecmwf(indj,n,uuh,vvh,wwh)
 !
 ! OPENING OF DATA FILE (GRIB CODE)
 !
+  write(*,*)   'Reading: '//path(3)(1:length(3)) &
+       //trim(wfname(indj))
 5 call grib_open_file(ifile,path(3)(1:length(3)) &
        //trim(wfname(indj)),'r',iret)
   if (iret.ne.GRIB_SUCCESS) then

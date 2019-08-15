@@ -96,7 +96,8 @@ subroutine readwind_nests(indj,n,uuhn,vvhn,wwhn)
   !
   ! OPENING OF DATA FILE (GRIB CODE)
   !
-
+    write(*,*)   'Reading: '//path(numpath+2*(l-1)+1) &
+         (1:length(numpath+2*(l-1)+1))//trim(wfnamen(l,indj))
 5   call grib_open_file(ifile,path(numpath+2*(l-1)+1) &
          (1:length(numpath+2*(l-1)+1))//trim(wfnamen(l,indj)),'r')
   if (iret.ne.GRIB_SUCCESS) then
