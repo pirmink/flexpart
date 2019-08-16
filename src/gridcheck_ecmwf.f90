@@ -437,8 +437,7 @@ subroutine gridcheck_ecmwf
   endif
 
   nuvz=iumax
-!meteoswiss  nwz =iwmax
-  nwz =iwmax + 1        !meteoswiss
+  nwz =iwmax + 1       ! +1 needed if input contains only lower levels
   if(nuvz.eq.nlev_ec) nwz=nlev_ec+1
 
   if (nuvz+1.gt.nuvzmax) then
