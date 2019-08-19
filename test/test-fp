@@ -126,6 +126,7 @@ Options:
   -h, --help           show this help and exit
   -j, --job=NAME       manually set job name (default: consecutive number)
   -n, --dry-run        print commands without executing them
+      --nwp-source=DIR directory with NWP files (precedence over --source-no)
       --parallel       run parallel code
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
   -r, --resol=RESOL    resolution, one of h1 or h05 (default: $resol)
@@ -194,6 +195,14 @@ while (( $# > 0 )) ; do
 	    ;;
 	-n | --dry-run)
 	    dry_run=yes
+	    ;;
+	--nwp-source*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		nwp_source="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && nwp_source="$1"
+	    fi
 	    ;;
 	-p | --partition*)
 	    # Mandatory option argument with or without =
@@ -419,33 +428,39 @@ release_start=( $(date --utc +"%Y%m%d %H%M%S" \
 
 # Select NWP data source
 # ----------------------
-if [[ -z $source_no ]] ; then
-    echo "Select NWP data source (option --source-no)"
-    select answer in "${nwp_source_list[@]}" ; do
-	# Note: Press return for default not possible
-	# as select repeats prompt until REPLY is not empty
-	[[ $REPLY == quit || $REPLY == exit ]] && exit
-	# answer is only set if REPLY was valid
-	[[ -n $answer ]] && break
-    done
-    source_no=$REPLY
-    echo "You secected: $answer"
-else
-    (( i_source = $source_no - 1 ))
-    answer=${nwp_source_list[$i_source]}
-    echo "Selected data source: $answer"
-fi
+if [[ -z $nwp_source ]] ; then
+    if [[ -z $source_no ]] ; then
+	echo "Select NWP data source (option --source-no)"
+	select answer in "${nwp_source_list[@]}" ; do
+	    # Note: Press return for default not possible
+	    # as select repeats prompt until REPLY is not empty
+	    [[ $REPLY == quit || $REPLY == exit ]] && exit
+	    # answer is only set if REPLY was valid
+	    [[ -n $answer ]] && break
+	done
+	source_no=$REPLY
+	echo "You secected: $answer"
+    else
+	(( i_source = $source_no - 1 ))
+	answer=${nwp_source_list[$i_source]}
+	echo "Selected data source: $answer"
+    fi
 
-# Extract directory path from nwp_source_list entry
-nwp_source=${answer#* in: }
-source_desc=${answer%% in:*}
-grib_input=$start_location/grib
+    # Extract directory path from nwp_source_list entry
+    nwp_source=${answer#* in: }
+    source_desc=${answer%% in:*}
+else
+    source_desc=$nwp_source
+fi
 
 # Check if GRIB data available
 if [ ! -d $nwp_source ] ; then
-    echo "$tag: GRIB data not available in: $nwp_source"
+    echo "$tag: NWP source is not a directory: $nwp_source"
     exit 9
 fi
+
+# Link destination for NWP files
+grib_input=$start_location/grib
 
 # Report GRIB data directory
 echo $tag: "Model data source: $nwp_source"
@@ -727,7 +742,7 @@ fi
 # Add full command to logfile
 logline="$0 $args # $job_name # $tag $basetime $fc_range $mode $rel_tag"
 logline="$logline --average=$avg_h --exe=$exe_path/$fp_exe --exe-tag=$exe_tag --partition=$partition --resol=$resol"
-logline="$logline --rel-mass=$rel_mass --rel-time=$t1,$t2 --job=$job_name --source-no=$source_no # $source_desc"
+logline="$logline --rel-mass=$rel_mass --rel-time=$t1,$t2 --job=$job_name --source-no=$source_no --nwp-source=$nwp_source"
 if [[ -z $dry_run ]] ; then
     echo "$logline # $(date +%F\ %R)" >> $tag.log
 fi
