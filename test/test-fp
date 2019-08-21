@@ -16,7 +16,7 @@
 # Author: Pirmin Kaufmann, MeteoSwiss
 #
 # Version:
-  revision=1.5   #vincr# version number, may be incremented using vincr
+  revision=1.6   #vincr# version number, may be incremented using vincr
 #
 # See git log for history of modifications
 #-============================================================================
@@ -74,7 +74,7 @@ exe_path=$(dirname $PWD)/src
 fp_exe_serial=FLEXPART
 fp_exe_parallel=FLEXPART_MPI
 # Flexpart option (one of -v -v2 -i -i2) and argument (name of pathfile)
-fp_opt=-v2
+fp_opt=
 # Release start and end (h, relative to basetime) (-t, --rel-time)
 t1=0
 t2=8
@@ -123,13 +123,15 @@ Options:
   -a, --average=H      averaging interval and output freqency of H [hours]
                        (Default: $avg_h)
   -e, --exe-tag=TAG    executable tag, use ${fp_exe}_<TAG> instead of $fp_exe
+      --fp-opt=OPT     add option OPT to command line when starting FLEXPART
+                       (Default: $fp_opt)
   -h, --help           show this help and exit
   -j, --job=NAME       manually set job name (default: consecutive number)
   -n, --dry-run        print commands without executing them
       --nwp-source=DIR directory with NWP files (precedence over --source-no)
       --parallel       run parallel code
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
-  -r, --resol=RESOL    resolution, one of h1 or h05 (default: $resol)
+  -r, --resol=RESOL    resolution, one of h1, h05, or h01 (default: $resol)
   -m, --rel-mass=M     released mass [Bq] (default: $rel_mass)
   -t, --rel-time=T1,T2 release from T1 to T2 (lead times [hours]).
                        (Default: $t1,$t2)
@@ -171,6 +173,14 @@ while (( $# > 0 )) ; do
 		exe_tag="${1#*=}"
 	    else
 		(( $# > 1 )) && shift && exe_tag="$1"
+	    fi
+	    ;;
+	-e | --fp-opt*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		fp_opt="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && fp_opt="$1"
 	    fi
 	    ;;
 	-h | --help)
@@ -338,10 +348,19 @@ fi
 echo $tag: "Job tag: $job_name"
 
 # Resolution
+# Define start of grib file name of mother and nested domains
 case $resol in
     h1)
+	# Obsolete configuration, HRES 1° global, 0.1° Europe
+	nests=( dispc dispf )
 	;;
     h05)
+	# Operational configuration, HRES 0.5° global, 0.1° Europe
+	nests=( dispc dispf )
+	;;
+    h01)
+	# Test configuration, mother domain 0.1° Europe, no nest
+	nests=( dispf )
 	;;
     *)
 	echo $tag: "Unknown resolution: $resol"
@@ -477,7 +496,6 @@ $exe_cmd ln -sfT $nwp_source $grib_input
 
 # Create AVAILABLE files
 # Loop over nests
-nests=( c f )
 i_nest=0
 while (( $i_nest < ${#nests[*]} )) ; do
     nest=${nests[$i_nest]}
@@ -494,7 +512,7 @@ while (( $i_nest < ${#nests[*]} )) ; do
 	available_file=$flex_input/$available_filename
     fi
     # Write file header
-    echo $tag: "Creating AVAILABLE file for nest $nest: $available_file"
+    echo $tag: "Creating AVAILABLE file with $nest* files for nest $i_nest: $available_file"
     cat > $available_file << EOF
 DATE     TIME        FILENAME
 YYYYMMDD HHMISS 
@@ -504,9 +522,9 @@ EOF
     # Find grib files
     if [ -d $grib_input ] ; then
 	pushd $grib_input > /dev/null
-	gribfiles=( disp$nest* )
+	gribfiles=( $nest* )
 	if [ ! -e "${gribfiles[0]}" ] ; then
-	    echo $tag: "No disp$nest* files found in: $grib_input"
+	    echo $tag: "No $nest* files found in: $grib_input"
 	    unset gribfiles
 	fi
 	popd > /dev/null
@@ -531,7 +549,7 @@ EOF
 
 	(( i_nest++ ))
     fi
-done
+done # Loop over nests
 
 # Write end of pathnames
 if [[ -z $dry_run ]] ; then
@@ -601,17 +619,20 @@ else
 fi
 
 # Outgrid
-#noresol: no resolution dependent OURGRID files
-#noresol [[ -z $exe_cmd ]] && echo -n " OUTGRID.$resol --> OUTGRID"
-#noresol if [ -f $input_templates/OUTGRID.$resol ] ; then
-#noresol    $exe_cmd cp $input_templates/OUTGRID.$resol $flex_input/OUTGRID
-[[ -z $exe_cmd ]] && echo -n " OUTGRID --> OUTGRID"          #noresol
-if [ -f $input_templates/OUTGRID ] ; then                    #noresol
-    $exe_cmd cp $input_templates/OUTGRID $flex_input/OUTGRID #noresol
+if [[ $resol == h01 ]] ; then
+    # Resolution 0.1° of mother domain, no nesting,
+    # Use adapted OUTGRID
+    outgrid=OUTGRID.$resol
+else
+    outgrid=OUTGRID
+fi
+[[ -z $exe_cmd ]] && echo -n " $outgrid --> OUTGRID"
+if [ -f $input_templates/$outgrid ] ; then
+    $exe_cmd cp $input_templates/$outgrid $flex_input/OUTGRID
 else
     echo
     echo "$tag: Cannot find template file for specified model resolution:" \
-	$input_templates/OUTGRID #noresol .$resol
+	$input_templates/$outgrid
     exit 15
 fi
 echo
