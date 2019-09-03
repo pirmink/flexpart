@@ -26,14 +26,16 @@
   real :: pdecay, pweta_gas, pwetb_gas, preldiff, phenry, pf0, pdensity, pdquer
   real :: pdsigma, pdryvel, pweightmolar, pohcconst, pohdconst, pohnconst
   real :: pcrain_aero, pcsnow_aero, pccn_aero, pin_aero
-  integer :: readerror, unitspecies, specnumber
+  real :: parea_dow(7), parea_hour(24), ppoint_dow(7), ppoint_hour(24)
+  integer :: ierr, unitspecies, specnumber
 
 ! declare namelist
   namelist /species_params/ &
        pspecies, pdecay, pweta_gas, pwetb_gas, &
        pcrain_aero, pcsnow_aero, pccn_aero, pin_aero, &
        preldiff, phenry, pf0, pdensity, pdquer, &
-       pdsigma, pdryvel, pweightmolar, pohcconst, pohdconst, pohnconst 
+       pdsigma, pdryvel, pweightmolar, pohcconst, pohdconst, pohnconst, &
+       parea_dow, parea_hour, ppoint_dow, ppoint_hour
 
   unitspecies=4
 
@@ -83,8 +85,15 @@
 
 ! Open the SPECIES file and read species names and properties
 !************************************************************
-  open(unitspecies,file=speciesfn,status='old',form='formatted',err=998)
-  read(unitspecies,species_params,err=998)
+  open(unitspecies,file=speciesfn,status='old',form='formatted',iostat=ierr)
+  if (ierr /= 0) then
+     ! Report missing files below 40
+     if (specnumber <= 40) then
+        write(*,*) 'No such file: ', trim(speciesfn)
+     end if
+     cycle
+  end if
+  read(unitspecies,species_params) ! to skip errors add: ,err=998
   close(unitspecies)
   
   write(*,45) specnumber,' ',pspecies,'|',pweightmolar,'|',pweta_gas,' ',pwetb_gas,'|', &
@@ -110,5 +119,6 @@ enddo
 write(*,*) '** unit [cm^3/molec/s] (in FLEXPART version 9.2 and below this had unit [cm3/s], note the unit is now changed!)'
 write(*,*) '*** no unit'
 
+ print*,'rho: density'
 
 end
