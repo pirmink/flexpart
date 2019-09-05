@@ -61,7 +61,7 @@ program flexpart
 
   implicit none
 
-  integer :: i,j,ix,jy,inest
+  integer :: i,j,ix,jy,inest, iopt
   integer :: idummy = -320
   character(len=256) :: inline_options  !pathfile, flexversion, arg2
   integer :: metdata_format = GRIBFILE_CENTRE_UNKNOWN
@@ -88,23 +88,24 @@ program flexpart
   end do
   call gasdev1(idummy,rannumb(maxrand),rannumb(maxrand-1))
 
+
   ! FLEXPART version string
   flexversion_major = '10' ! Major version number, also used for species file names
-  flexversion='Ver. '//trim(flexversion_major)//'.2beta MPI (2017-08-01)'
+  flexversion='Version '//trim(flexversion_major)//'.4 MPI (2019-07-23)'
   verbosity=0
 
   ! Read the pathnames where input/output files are stored
   !*******************************************************
 
   inline_options='none'
-  select case (iargc())
+  select case (command_argument_count())  ! Use Fortran standard intrinsic procedure
   case (2)
-    call getarg(1,arg1)
+    call get_command_argument(1,arg1)     ! Use Fortran standard intrinsic procedure
     pathfile=arg1
-    call getarg(2,arg2)
+    call get_command_argument(2,arg2)     ! Use Fortran standard intrinsic procedure
     inline_options=arg2
   case (1)
-    call getarg(1,arg1)
+    call get_command_argument(1,arg1)     ! Use Fortran standard intrinsic procedure
     pathfile=arg1
     if (arg1(1:1).eq.'-') then
       write(pathfile,'(a11)') './pathnames'
@@ -122,26 +123,41 @@ program flexpart
   endif
   
   if (inline_options(1:1).eq.'-') then
-    if (trim(inline_options).eq.'-v'.or.trim(inline_options).eq.'-v1') then
-      print*, 'Verbose mode 1: display detailed information during run'
+    print*,'inline_options:',inline_options
+    !verbose mode
+    iopt=index(inline_options,'v') 
+    if (iopt.gt.0) then
       verbosity=1
+      !print*, iopt, inline_options(iopt+1:iopt+1)
+      if  (trim(inline_options(iopt+1:iopt+1)).eq.'2') then
+        print*, 'Verbose mode 2: display more detailed information during run'
+        verbosity=2
+      endif
     endif
-    if (trim(inline_options).eq.'-v2') then
-      print*, 'Verbose mode 2: display more detailed information during run'
-      verbosity=2
+    !debug mode 
+    iopt=index(inline_options,'d')
+    if (iopt.gt.0) then
+      debug_mode=.true.
     endif
     if (trim(inline_options).eq.'-i') then
-      print*, 'Info mode: provide detailed run specific information and stop'
-      verbosity=1
-      info_flag=1
+       print*, 'Info mode: provide detailed run specific information and stop'
+       verbosity=1
+       info_flag=1
     endif
     if (trim(inline_options).eq.'-i2') then
-      print*, 'Info mode: provide more detailed run specific information and stop'
-      verbosity=2
-      info_flag=1
+       print*, 'Info mode: provide more detailed run specific information and stop'
+       verbosity=2
+       info_flag=1
     endif
   endif
            
+  if (verbosity.gt.0) then
+    print*, 'nxmax=',nxmax
+    print*, 'nymax=',nymax
+    print*, 'nzmax=',nzmax
+    print*,'nxshift=',nxshift 
+  endif
+  
   if (verbosity.gt.0) then
     write(*,*) 'call readpaths'
   endif 
@@ -171,10 +187,10 @@ program flexpart
     if (verbosity.gt.1) then   
       CALL SYSTEM_CLOCK(count_clock, count_rate, count_max)
       write(*,*) 'SYSTEM_CLOCK',(count_clock - count_clock0)/real(count_rate) !, count_rate, count_max
-    endif
+    endif     
   endif
 
-  ! Initialize arrays in com_mod 
+  ! Initialize arrays in com_mod
   !*****************************
 
   if(.not.(lmpreader.and.lmp_use_reader)) call com_mod_allocate_part(maxpart_mpi)
@@ -202,6 +218,9 @@ program flexpart
 
   ! Detect metdata format
   !**********************
+  if (verbosity.gt.0 .and. lroot) then
+    write(*,*) 'call detectformat'
+  endif
 
   metdata_format = detectformat()
 
