@@ -1,61 +1,68 @@
 #!/bin/bash
 
 # Set environment variables and build the Flexpart executable for use by
-# MeteoSwiss on escha/kesch at CSCS
-
-# The use of the environment variables instead of the definitions in the
-# makefile itself is ensured with the option --environment-overrides to the
+# MeteoSwiss at CSCS
+#
+# The use of the environment variables to override the definitions in the
+# makefile is ensured with the option --environment-overrides to the
 # "make" command.
 
-module load PE/17.06
-module load PrgEnv-gnu/17.02
-module load netcdf-fortran/4.4.4-gmvolf-17.02
-module load grib_api/1.13.1-gnu-5.4.0
-
-# Settings in makefile provided as part of the release
+# Settings in original makefile as provided with the release
 #	ROOT_DIR = /homevip/flexpart/
-
+#
 #	F90	  = /usr/bin/gfortran
 #	MPIF90    = /usr/bin/mpifort
-
+#
 #	INCPATH1  = ${ROOT_DIR}/gcc-5.4.0/include	
 #	INCPATH2  = /usr/include
 #	LIBPATH1 = ${ROOT_DIR}/gcc-5.4.0/lib
 
-# Settings for escha/kesch
-# grib_api definitions using variables set by programming environment
-echo GRIBAPI_PATH=$GRIBAPI_PATH
-##export  INCPATH=${GRIBAPI_PATH}/include
-##export LIBPATH1=${GRIBAPI_PATH}/lib
-##export LIBPATH2=${JASPER_PATH}/lib
+# Settings for CSCS machines
+# --------------------------
+# Settins independent of host
 export ROOT_DIR=$(dirname $PWD)
 export      F90=gfortran
 export   MPIF90=mpif90
-export INCPATH1=${GRIBAPI_PATH}/include	
-export INCPATH2=${CPATH%%:*}
-export LIBPATH1=${GRIBAPI_PATH}/lib
-##export LIBPATH2=${JASPER_PATH}/lib
 # Additional compiler flags
-export    FUSER='-finit-local-zero -lpthread'
-
-# Compiler settings
 # add -finit-local-zero (hints at uninitialized variables)
 # add -lpthread to LDFLAGS (cs-storm requirement)
-##export   FFLAGS="-I${INCPATH} -m64 -mcmodel=medium -fconvert=little-endian -frecord-marker=4 -finit-local-zero"
-##export  LDFLAGS="${FFLAGS} -L${LIBPATH2} -L${LIBPATH1} -lgrib_api_f90 -lgrib_api -lm -ljasper -lpthread"
+export    FUSER='-finit-local-zero -lpthread'
+
+# Settings depending on host
+if [[ $HOST == *esch* ]] ; then
+    # Load environment for escha/kesch
+    source FLEXPART.env.kesch
+    # Makefile
+    makefile=makefile
+    # Settings for escha/kesch
+    export INCPATH1=${GRIBAPI_PATH}/include	
+    export INCPATH2=${CPATH%%:*}
+    export LIBPATH1=${GRIBAPI_PATH}/lib
+else
+    # Load environment for arolla/tsa
+    source FLEXPART.env.arolla
+    # Makefile
+    makefile=makefile.arolla
+    # Settings for arolla/tsa
+    export INCPATH1=${GRIBAPIROOT}/include	
+    export INCPATH2=${CPATH%%:*}
+    export LIBPATH1=${GRIBAPIROOT}/lib
+    export LIBPATH2=${JASPERROOT}/lib
+    export LIBPATH3=${LIBAECROOT}/lib
+fi
 
 # Report settings
 echo ROOT_DIR=$ROOT_DIR
 echo      F90=$F90
 echo   MPIF90=$MPIF90
+echo    FUSER=$FUSER
 echo INCPATH1=$INCPATH1
 echo INCPATH2=$INCPATH2
 echo LIBPATH1=$LIBPATH1
-##echo LIBPATH2=$LIBPATH2
-echo    FUSER=$FUSER
-##echo   FFLAGS=$FFLAGS
-##echo  LDFLAGS=$LDFLAGS
+echo     LIBS=$LIBS
 
 # Build application using above settings
-echo Builing application using default makefile with above settings ...
-make -f makefile --environment-overrides $@
+# Option --environment-overrides forces variables in makefile
+# to be overridden by exported variables from above
+echo "Builing application using default makefile with above settings ..."
+make -f $makefile --environment-overrides $@
