@@ -32,6 +32,7 @@
 # ECMWF IFS-HRES
 nwp_source_list=( \
     "Operational cache          in: /opr/owm/cache/FLEXPART-IFS"             \
+    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"          \
     "Test data, all levels      in: /scratch/owm/work/FLEXPART-IFS-HR"       \
     "Test only lowest 98 levels in: /scratch/owm/work/FLEXPART-IFS-L98"      \
     "Test temp. resolution step in: /scratch/walser/cache/FLEXPART-IFS-L98"  \
@@ -39,7 +40,9 @@ nwp_source_list=( \
     "Test 1°, 0.1 ° nesting     in: /scratch/walser/cache/FLEXPART-IFS-glob1deg" \
     "Test cache 0.5°/0.1°       in: /opr/owm/cache/FLEXPART-IFS-L98" \
     )
-# Flexpart input files
+# Flexpart environment file
+environment_file=$(dirname $PWD)/src/FLEXPART.env
+# Flexpart input file templates
 input_templates=$(dirname $PWD)/options # original options directory
 #input_templates=$PWD/options # options directory in test
 # Automatic job numbering
@@ -67,7 +70,7 @@ rel_tag=goe
 # Defaults for options
 # --------------------
 # Resolution (-r, --resol)
-resol=h05
+resol=global
 # Flexpart executable (-e, --exe-tag)
 # should agree with Makefile variables EXEDIR, EXECUTABLE
 exe_path=$(dirname $PWD)/src
@@ -122,7 +125,7 @@ Options:
   Mandatory arguments to long options are mandatory for short options too.
   -a, --average=H      averaging interval and output freqency of H [hours]
                        (Default: $avg_h)
-  -e, --exe-tag=TAG    executable tag, use ${fp_exe}_<TAG> instead of $fp_exe
+  -e, --exe-tag=TAG    executable tag, attach _TAG to name of executable
       --fp-opt=OPT     add option OPT to command line when starting FLEXPART
                        (Default: $fp_opt)
   -h, --help           show this help and exit
@@ -131,7 +134,7 @@ Options:
       --nwp-source=DIR directory with NWP files (precedence over --source-no)
       --parallel       run parallel code
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
-  -r, --resol=RESOL    resolution, one of h1, h05, or h01 (default: $resol)
+  -r, --resol=RESOL    resolution, one of "global", "europe" (default: $resol)
   -m, --rel-mass=M     released mass [Bq] (default: $rel_mass)
   -t, --rel-time=T1,T2 release from T1 to T2 (lead times [hours]).
                        (Default: $t1,$t2)
@@ -141,8 +144,10 @@ Options:
                        in SPECIES directory
   -s, --stop           stop script before starting job (do not submit job)
   -V, --version        output version information and exit
-  -x, --exe=EXE        Flexpart executable 
-                       (Default: $exe_path/$fp_exe)
+  -x, --exe=EXE        Flexpart executable including path (default path:
+                       $exe_path
+                       default names: $fp_exe_serial for serial,
+                       $fp_exe_parallel for parallel runs)
 
 EOF
 } # function usage
@@ -350,12 +355,20 @@ echo $tag: "Job tag: $job_name"
 # Resolution
 # Define start of grib file name of mother and nested domains
 case $resol in
+    europe)
+	# Operational configuration summer 2020, mother domain 0.1° Europe, no nest
+	nests=( dispf )
+	;;
+    global)
+	# Operational configuration summer 2020, IFS-HRES 0.5° global, 0.1° Europe
+	nests=( dispc dispf )
+	;;
     h1)
-	# Obsolete configuration, HRES 1° global, 0.1° Europe
+	# Obsolete configuration, IFS-HRES 1° global, 0.1° Europe
 	nests=( dispc dispf )
 	;;
     h05)
-	# Operational configuration, HRES 0.5° global, 0.1° Europe
+	# Operational configuration, IFS-HRES 0.5° global, 0.1° Europe
 	nests=( dispc dispf )
 	;;
     h01)
@@ -403,8 +416,10 @@ if [ ! -x $exe_path/$fp_exe ] ; then
     echo $tag: "Executable not found: $exe_path/$fp_exe"
     exit 6
 fi
-# Copy executable
+# Copy executable and environmet file
 $exe_cmd cp -p $exe_path/$fp_exe $start_location/.
+$exe_cmd ln -sf $exe_path $start_location/.
+$exe_cmd cp $environment_file $start_location/.
 
 # Input and output directories
 flex_input=$start_location/input
@@ -619,13 +634,7 @@ else
 fi
 
 # Outgrid
-if [[ $resol == h01 ]] ; then
-    # Resolution 0.1° of mother domain, no nesting,
-    # Use adapted OUTGRID
-    outgrid=OUTGRID.$resol
-else
-    outgrid=OUTGRID
-fi
+outgrid=OUTGRID.$resol
 [[ -z $exe_cmd ]] && echo -n " $outgrid --> OUTGRID"
 if [ -f $input_templates/$outgrid ] ; then
     $exe_cmd cp $input_templates/$outgrid $flex_input/OUTGRID
@@ -744,15 +753,8 @@ ulimit -a
 
 # Run flexpart
 # ------------
-# Load needed modules
-echo loading module PE/17.06
-module load PE/17.06
-echo loading module PrgEnv-gnu
-module load PrgEnv-gnu
-echo loading module netcdf-fortran
-module load netcdf-fortran
-echo loading module grib_api
-module load grib_api
+# Load needed environment
+source FLEXPART.env
 
 # Run FLEXPART in case directory
 srun --kill-on-bad-exit $parallel_opt ./$fp_exe $fp_opt
