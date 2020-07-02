@@ -10,16 +10,16 @@ dispers_resources=/users/kaufmann/src/oprtools/dispersion/resources
 #debug_opt=--debug
 
 # Domains (see ls $dispers_resources/cities_*.txt for available domains)
-domains=( envelope ) # zoom )
+domains=( europe alps )
 
 # Levels/fields to plot
-fieldlevels=( CONC ) # CONC_1 ) # DEPO )
+fieldlevels=( CONC_1 DEPO )
 
 # Formats (ps, gif, png)
 formats=( ps )
 
 # Size of image for GIF or PNG files
-img_size='--xsize=1024 --ysize=728'
+img_size='--xsize=1131 --ysize=769'
 # --------
 
 # Check file availability
@@ -48,9 +48,11 @@ for domain in ${domains[*]} ; do
 		;;
 
 	    gif | png)
+		set -x
 		$flexplot --domain=$domain $debug_opt \
 		    --format=$format $img_size \
 		    --cities=$dispers_resources
+		set +x
 		#   --cantons==$dispers_resources/kantonsgrenzen_wgs1984.shx
 		;;
 	esac

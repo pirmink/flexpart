@@ -31,14 +31,10 @@
 # Path to GRIB files disp[cf]YYYYMMDDHH
 # ECMWF IFS-HRES
 nwp_source_list=( \
-    "Operational cache          in: /opr/owm/cache/FLEXPART-IFS"             \
-    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"          \
-    "Test data, all levels      in: /scratch/owm/work/FLEXPART-IFS-HR"       \
-    "Test only lowest 98 levels in: /scratch/owm/work/FLEXPART-IFS-L98"      \
-    "Test temp. resolution step in: /scratch/walser/cache/FLEXPART-IFS-L98"  \
-    "Test single fc             in: /scratch/walser/cache/FLEXPART-IFS-L98-OLD" \
-    "Test 1°, 0.1 ° nesting     in: /scratch/walser/cache/FLEXPART-IFS-glob1deg" \
-    "Test cache 0.5°/0.1°       in: /opr/owm/cache/FLEXPART-IFS-L98" \
+    "Operational cache global 3-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-GLOBAL" \
+    "Operational cache Europe 1-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-EUROPE" \
+    "Operational cache on escha/kesch in: /opr/owm/cache/FLEXPART-IFS"             \
+    "User cache                       in: /scratch/$LOGNAME/FLEXPART-IFS"          \
     )
 # Flexpart environment file
 environment_file=$(dirname $PWD)/src/FLEXPART.env

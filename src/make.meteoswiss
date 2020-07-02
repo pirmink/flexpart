@@ -3,20 +3,17 @@
 # Set environment variables and build the Flexpart executable for use by
 # MeteoSwiss on escha/kesch at CSCS
 
-# The use of the environment variables instead of the definitions in the
-# makefile itself is ensured with the option --environment-overrides to the
-# "make" command.
+# To ensure the usage of the variables in the makefile as definded in the
+# environment variables below, overriding the definitions in the makefile itself,
+# make is called with the option --environment-overrides.
 
-module unload curl
-#module use --append /oprusers/osm/opr.tsa/modules/modulefiles
-module use /apps/common/UES/sandbox/kraushm/tsa-gnu-73/easybuild/modules/all
-module use /tsa/kraushm/FLEXPART/GNU-7.4.0/modulefiles
-#module use --append /oprusers/osm/opr.arolla/modules/modulefiles
+# Environment file
+flexpart_env=FLEXPART.env
+# Makefile
+makefile=makefile.meteoswiss
 
-#module load PrgEnv-gnu/19.2
-module load netcdf-fortran/4.4.5-gmvolf-18.12
-#module load netcdf-fortran/4.4.5-fosscuda-2019b
-module load eccodes/2.14.1-gnu-7.4.0-noomp
+# Load environment
+. $flexpart_env
 
 # Settings in makefile provided as part of the release
 #	ROOT_DIR = /homevip/flexpart/
@@ -37,16 +34,10 @@ export   MPIF90=mpif90
 export INCPATH1=${ECCODESROOT}/include	
 export INCPATH2=${CPATH%%:*}
 export LIBPATH1=${ECCODESROOT}/lib
-export LIBPATH2=${JASPERROOT}/lib
-export LIBPATH3=${LIBAECROOT}/lib
+export LIBPATH2=${JASPER_DIR}/lib
+export LIBPATH3=${LIBAEC_DIR}/lib
 # Additional compiler flags
 export    FUSER='-finit-local-zero -lpthread'
-
-# Compiler settings
-# add -finit-local-zero (hints at uninitialized variables)
-# add -lpthread to LDFLAGS (cs-storm requirement)
-##export   FFLAGS="-I${INCPATH} -m64 -mcmodel=medium -fconvert=little-endian -frecord-marker=4 -finit-local-zero"
-##export  LDFLAGS="${FFLAGS} -L${LIBPATH2} -L${LIBPATH1} -leccodes_f90 -leccodes -lm -ljasper -laec -lpthread"
 
 # Report settings
 echo ROOT_DIR=$ROOT_DIR
@@ -57,11 +48,8 @@ echo INCPATH2=$INCPATH2
 echo LIBPATH1=$LIBPATH1
 echo LIBPATH2=$LIBPATH2
 echo LIBPATH3=$LIBPATH3
-##echo LIBPATH2=$LIBPATH2
 echo    FUSER=$FUSER
-##echo   FFLAGS=$FFLAGS
-##echo  LDFLAGS=$LDFLAGS
 
 # Build application using above settings
 echo Builing application using default makefile with above settings ...
-make -f makefile.meteoswiss --environment-overrides $@ ncf=yes
+make -f $makefile --environment-overrides $@ ncf=yes
