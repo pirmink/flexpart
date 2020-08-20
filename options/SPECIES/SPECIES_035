@@ -1,6 +1,6 @@
 &SPECIES_PARAMS
- PSPECIES="Co-60",            ! Tracer name
- PDECAY=166.226256E6,         ! Species half life
+ PSPECIES="Ba-140",           ! Tracer name
+ PDECAY=1.100736E6,           ! Species half life
  PWETA_GAS=-0.9E-9,           ! Below-cloud scavenging (gases) - A (weta_gas)
  PWETB_GAS=-9.9,              ! Below-cloud scavenging (gases) - B (wetb_gas)
  PCRAIN_AERO=1.0,             ! Below-cloud scavenging (particles) - Crain (crain_aero)
