@@ -16,7 +16,7 @@
 # Author: Pirmin Kaufmann, MeteoSwiss
 #
 # Version:
-  revision=1.6   #vincr# version number, may be incremented using vincr
+  revision="1.7 ifs"  #vincr# version number, may be incremented using vincr
 #
 # See git log for history of modifications
 #-============================================================================
@@ -26,9 +26,11 @@
 #=============================================================================
 # NWP model data sources
 # ----------------------
+# Path to NWP files depending on resolution (see --resol)
 # String is split at " in: "
-# "<description> in: <path>"
-# Path to GRIB files disp[cf]YYYYMMDDHH
+# Template:
+#   "<description> in: <path>"
+# Allowed placeholders: not supported
 # ECMWF IFS-HRES
 nwp_source_list=( \
     "Operational cache global 3-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-GLOBAL" \
@@ -40,28 +42,27 @@ nwp_source_list=( \
 environment_file=$(dirname $PWD)/src/FLEXPART.env
 # Flexpart input file templates
 input_templates=$(dirname $PWD)/options # original options directory
-#input_templates=$PWD/options # options directory in test
-# Automatic job numbering
+# File for automatic job numbering
 job_no_file=$HOME/.flexpart_job
 # Root directory for job directories
 job_root=$SCRATCH/flexpart/job
-# Job file
+# Job file name
 job_file=job
 # Job logfile
 job_out=job.log
 # Landuse file
-landuse=/store/mch/msopr/flexpart_data/IGBP_int1.dat
+landuse_file=/store/mch/msopr/flexpart_data/IGBP_int1.dat
 
 # Defaults for arguments
 # ----------------------
 # Base time
-basetime=$(date --utc --date="00" +%Y%m%d%H)           # Current day 00 UTC
+basetime=$(date --utc --date="00 yesterday" +%Y%m%d%H)           # Yesterday 00 UTC
 # Forecast range
-fc_range=72
+fc_range=48
 # Simulation mode
 mode=1
-# Tag of RELEASES file
-rel_tag=goe
+# Tag of RELEASES file (-R, --rel-tag)
+rel_tag=goe2
 
 # Defaults for options
 # --------------------
@@ -79,17 +80,14 @@ t1=0
 t2=8
 # Averaging interval and output frequency (-a, --average)
 avg_h=3
-# Species number
-species_no=16 # Cs-137
-# Total released mass (-m, --rel-mass)
-rel_mass=1.0E09
 # Run mode serial or parallel
 run_mode=serial
 # Partition (-p, --partition)
 # On kesch/escha: one of postproc, pp-long, pp-serial
 partition_serial=pp-serial
 partition_parallel=postproc
-
+# Output format (-J, --iout)
+iout=9
 #=============================================================================
 # Functions
 #=============================================================================
@@ -108,42 +106,43 @@ function usage {
 
 Script to prepare and run Flexpart
 
-Usage: $tag [Options] [BASETIME FC_RANGE MODE TAG]
+Usage: $tag [Options] [BASETIME FC_RANGE MODE]
 
 Arguments:
 
   BASETIME      forecast base date/time (format YYYYMMDDHH, def.: $basetime)
   FC_RANGE      maximum lead time / forecast range (def.: $fc_range)
   MODE          simulation mode: 1 = forward, -1 = backward (def.: $mode)
-  TAG           use RELEASES.TAG as template for RELEASES file (def.: $rel_tag)
 
 Options:
   Mandatory arguments to long options are mandatory for short options too.
   -a, --average=H      averaging interval and output freqency of H [hours]
                        (Default: $avg_h)
+  -n, --dry-run        print commands without executing them
+  -x, --exe=EXE        Flexpart executable including path (default path:
+                       $exe_path
+                       default names: $fp_exe_serial for serial,
+                       $fp_exe_parallel for parallel runs)
   -e, --exe-tag=TAG    executable tag, attach _TAG to name of executable
       --fp-opt=OPT     add option OPT to command line when starting FLEXPART
                        (Default: $fp_opt)
   -h, --help           show this help and exit
   -j, --job=NAME       manually set job name (default: consecutive number)
-  -n, --dry-run        print commands without executing them
       --nwp-source=DIR directory with NWP files (precedence over --source-no)
       --parallel       run parallel code
+  -J, --iout=I         Set IOUT to I (1 binary, 9 NetCDF output)
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
   -r, --resol=RESOL    resolution, one of "global", "europe" (default: $resol)
-  -m, --rel-mass=M     released mass [Bq] (default: $rel_mass)
+  -M, --rel-mass=M     released mass(es) [Bq] (default according to RELEASES file)
+  -R, --rel-tag=TAG    release tag, selects file RELEASES.TAG (default: $rel_tag)
   -t, --rel-time=T1,T2 release from T1 to T2 (lead times [hours]).
                        (Default: $t1,$t2)
       --run-mode=MODE  run code in MODE, either serial or parallel
   -S, --source-no=N    select source no N from list of NWP data sources
-      --species-no=N   select species no N according to definition
-                       in SPECIES directory
+  -N, --species-no=N   select species number(s) (default according to RELEASES file)
+                       species numbers according to definition in ../options/SPECIES
   -s, --stop           stop script before starting job (do not submit job)
   -V, --version        output version information and exit
-  -x, --exe=EXE        Flexpart executable including path (default path:
-                       $exe_path
-                       default names: $fp_exe_serial for serial,
-                       $fp_exe_parallel for parallel runs)
 
 EOF
 } # function usage
@@ -188,6 +187,14 @@ while (( $# > 0 )) ; do
 	    usage
 	    exit 0
 	    ;;
+	-J | --iout*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		iout="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && iout="$1"
+	    fi
+	    ;;
 	-j | --job*)
 	    # Mandatory option argument with or without =
 	    if [[ "$1" == *=* ]] ; then
@@ -196,7 +203,7 @@ while (( $# > 0 )) ; do
 		(( $# > 1 )) && shift && job_name="$1"
 	    fi
 	    ;;
-	-m | --rel-mass*)
+	-M | --rel-mass*)
 	    # Mandatory option argument with or without =
 	    if [[ "$1" == *=* ]] ; then
 		rel_mass="${1#*=}"
@@ -240,10 +247,18 @@ while (( $# > 0 )) ; do
 		(( $# > 1 )) && shift && run_mode="$1"
 	    fi
 	    ;;
+	-R | --rel-tag*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		rel_tag="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && rel_tag="$1"
+	    fi
+	    ;;
 	-s | --stop)
 	    no_submit=yes
 	    ;;
-	--species-no*)
+	-N | --species-no*)
 	    # Mandatory option argument with or without =
 	    if [[ "$1" == *=* ]] ; then
 		species_no="${1#*=}"
@@ -278,7 +293,7 @@ while (( $# > 0 )) ; do
 	    ;;
 	-V | --version)
 	    version
-	    exit 0
+	    exit
 	    ;;
 	-x | --exe*)
 	    # Mandatory option argument with or without =
@@ -290,11 +305,14 @@ while (( $# > 0 )) ; do
 		(( $# > 1 )) && shift && exe_path=$(dirname "$1") && fp_exe=$(basename "$1")
 	    fi
 	    ;;
-	-*)
-            echo $tag: "Unknown option $1"
-	    exit 2
-	    ;;
 	*)
+	    # Check for unknown option until first positional argument
+	    # (some arguments might be negative numbers)
+	    if (( $iarg == 0 )) && [[ $1 = -* ]] ; then
+		echo $tag: "Unknown option $1"
+		exit 2
+	    fi
+            # Positional arguments
 	    (( iarg++ ))
 	    case $iarg in
 		1)  # BASETIME
@@ -307,9 +325,6 @@ while (( $# > 0 )) ; do
 		    ;;
 		3)  # MODE
 		    mode="$1"
-		    ;;
-		4)  # REL_TAG
-		    rel_tag="$1"
 		    ;;
 		*)
 		    echo $tag: "Too many arguments: $1"
@@ -328,11 +343,19 @@ done
 if [[ -n $dry_run ]] ; then
     # Enable escape sequences in echo with option -e
     exe_cmd="echo -e \e[07;32m \e[0m  "
-    echo    "$tag: INFO: Option --dry-run set, printing commands without executing them."
-    echo -n "$tag: Skipped commands are marked with: "
+    echo    $tag: "INFO: Option --dry-run set, printing commands without executing them."
+    echo -n $tag: "Skipped commands are marked with: "
     $exe_cmd
 fi
 
+# Report arguments
+echo $tag: "NWP input base time, range, simulation mode, release tag:" \
+    "$basetime, $fc_range, $mode, $rel_tag"
+echo $tag: "Release from (lead time, time): +$t1 = $release_start"
+echo $tag: "Release to   (lead time, time): +$t2 = $release_end"
+
+# Prepare job
+# -----------
 # Job number
 if [ -f $job_no_file ] ; then
     job_no=`cat $job_no_file`
@@ -383,18 +406,12 @@ if [[ -z $partition ]] ; then
     eval partition=\$partition_$run_mode
 fi
 
-# Prepare job
-# -----------
 # Job directory
 start_location=$job_root/$job_name
 if [ -d $start_location ] ; then
-    echo -n $tag: "Job directory already exists, overwrite? "
-    read answer
-    if [[ $answer != [yY]* ]] ; then
-	echo $tag: "Aborted"
-	exit 5
-    fi
+    echo $tag: "Using existing job directory: $start_location"
 else
+    echo $tag: "Creating job directory: $start_location"
     $exe_cmd mkdir -p $start_location
 fi
 # Link working dir into test dir
@@ -453,8 +470,8 @@ release_start=( $(date --utc +"%Y%m%d %H%M%S" \
   release_end=( $(date --utc +"%Y%m%d %H%M%S" \
 	               --date="${basetime:0:8} ${basetime:8:2} $t2 hours") )
 
-# Retrieve input data
-# -------------------
+# Retrieve NWP input data
+# -----------------------
 
 # Select NWP data source
 # ----------------------
@@ -598,7 +615,7 @@ fi
 $exe_cmd cp $input_templates/SPECIES/* $flex_input/SPECIES
 
 # Copy landuse file
-$exe_cmd cp $landuse $flex_input
+$exe_cmd cp $landuse_file $flex_input
 
 # Release with tag
 if [[ -n $rel_tag ]] ; then
@@ -690,6 +707,9 @@ $exe_cmd gres "LOUTSTEP *= *[0-9]*, !" "$(printf "LOUTSTEP=%15d" $avg_s), !" \
     $flex_input/COMMAND
 $exe_cmd gres "LOUTAVER *= *[0-9]*, !" "$(printf "LOUTAVER=%15d" $avg_s), !" \
     $flex_input/COMMAND
+# Output format (-J, --iout)
+$exe_cmd gres "IOUT *= *[0-9]*, !" "$(printf "IOUT=%15d" $iout), !" \
+    $flex_input/COMMAND
 
 # Adapt RELEASES
 # -------------
@@ -710,14 +730,18 @@ $exe_cmd gres "IDATE2 *=.*, !" \
 $exe_cmd gres "ITIME2 *=.*, !" \
     "ITIME2  =         ${release_end[1]}, !"\
     $flex_input/RELEASES
-# Species number
-echo $tag: "      Species number: $(printf "%9.3E" $species_no)"
-$exe_cmd gres "SPECNUM_REL *=.*, !" " SPECNUM_REL=$(printf "%11d" $species_no), !" \
-    $flex_input/RELEASES
-# Total mass emitted
-echo $tag: "  Total mass emitted: $(printf "%9.3E" $rel_mass)"
-$exe_cmd gres "MASS *=.*, !" "MASS    =$(printf "%15.4E" $rel_mass), !" \
-    $flex_input/RELEASES
+# Replace species number (option --species-no)
+if [[ -n $species_no ]] ; then
+    echo $tag: "      Species number: $species_no"
+    $exe_cmd gres "SPECNUM_REL *=.*, !" " SPECNUM_REL = $species_no, !" \
+	$flex_input/RELEASES
+fi
+# Replace total mass emitted (option --rel-mass)
+if [[ -n $rel_mass ]] ; then
+    echo $tag: "  Total mass emitted: $rel_mass"
+    $exe_cmd gres "MASS *=.*, !" "MASS = $rel_mass, !" \
+	$flex_input/RELEASES
+fi
 
 # Parallel execution
 if [[ $run_mode == parallel ]] ; then
@@ -730,7 +754,7 @@ if [[ -z $dry_run ]] ; then
     # Job head
     cat > $start_location/$job_file <<EOF
 #!/bin/bash
-#SBATCH --job-name=FP.$job_name
+#SBATCH --job-name=FP-I${resol:0:1}.$job_name
 #SBATCH --output=$start_location/$job_out
 #SBATCH --error=$start_location/$job_out
 #SBATCH --partition=$partition
@@ -760,8 +784,10 @@ fi
 
 # Add full command to logfile
 logline="$0 $args # $job_name # $tag $basetime $fc_range $mode $rel_tag"
-logline="$logline --average=$avg_h --exe=$exe_path/$fp_exe --exe-tag=$exe_tag --partition=$partition --resol=$resol"
-logline="$logline --rel-mass=$rel_mass --rel-time=$t1,$t2 --job=$job_name --source-no=$source_no --nwp-source=$nwp_source"
+logline+=" --average=$avg_h --exe=$exe_path/$fp_exe --exe-tag=$exe_tag"
+logline+=" --partition=$partition --resol=$resol"
+logline+=" --species-no=$species_no --rel-mass=$rel_mass --rel-time=$t1,$t2"
+logline+=" --job=$job_name --source-no=$source_no --nwp-source=$nwp_source"
 if [[ -z $dry_run ]] ; then
     echo "$logline # $(date +%F\ %R)" >> $tag.log
 fi
