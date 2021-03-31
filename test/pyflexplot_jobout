@@ -7,9 +7,20 @@
 
 # Settings
 # --------
-preset=opr/ifs-hres-eu/all_???
+# Root directory for job directories (see also test-fp script)
+job_root=$SCRATCH/flexpart/job
+# File with some metadata missing in nc file (see also test-fp script)
 plot_info_file=plot_info
+# --------
+
 # Defaults
+# --------
+# Pyflexplot presets
+#preset="opr/cosmo-1e/all_pdf???"
+preset="opr/cosmo-1e-ctrl/all_???"
+#preset="opr/ifs-hres/all_???"
+#preset="opr/ifs-hres-eu/all_???"
+# Number of parallel threads used in pyflexplot
 ncpus=5
 # --------
 
@@ -21,14 +32,20 @@ function display_help {
 
 Use pyflexplot to produce the standard plot set for the NAZ.
        
-Usage: $tag [OPTION]...
+Usage: $tag [OPTION]... JOBDIR
+
+  JOBDIR                 Directory in which job was run. FLEXPART output file
+                         is searched in $job_root/JOBDIR/output
+                         instead of current directory.
 
 Mandatory arguments to long options are mandatory for short options too.
   -c, --clean            delete existing plots before invoking pyflexplot
+  -d, --debug            print out additional debug output
   -f, --force            invoke pyflexplot even if plots already exist
   -h, --help             display this help and exit
   -n, --dry-run          print commands without executing them
   -N, --ncpus=NCPUS      use NCPUS parallel threads for pyflexplot
+  -p, --preset=PRESET    use pyflexplot with preset PRESET instead of $preset
 
 EOF
 } # function display_help
@@ -45,8 +62,18 @@ while (( $# > 0 )) ; do
 	-c | --clean)
 	    clean=yes
 	    ;;
+	-d | --debug)
+	    debug=yes
+	    ;;
 	-n | --dry-run)
 	    dry_run=yes
+	    ;;
+	-f | --force)
+	    force=yes
+	    ;;
+	-h | --help)
+	    display_help
+	    exit
 	    ;;
 	-N | --ncpus*)
 	    # Mandatory option argument with or without =
@@ -56,12 +83,13 @@ while (( $# > 0 )) ; do
 		(( $# > 1 )) && shift && ncpus="$1"
 	    fi
 	    ;;
-	-f | --force)
-	    force=yes
-	    ;;
-	-h | --help)
-	    echo Usage: $tag JOBDIR
-	    exit
+	-p | --preset*)
+	    # Mandatory option argument with or without =
+	    if [[ "$1" == *=* ]] ; then
+		preset="${1#*=}"
+	    else
+		(( $# > 1 )) && shift && preset="$1"
+	    fi
 	    ;;
 	-*)
 	    echo $tag: "Unknown option: $1"
@@ -98,7 +126,7 @@ fi
 
 # Change to ouput directory
 if [[ -n $jobdir ]] ; then
-    jobout=$jobdir/output
+    jobout=$job_root/$jobdir/output
     echo $tag: Producing jobs in: $jobout
     pushd $jobout > /dev/null
 else
@@ -142,12 +170,23 @@ if [[ -n $jobdir ]] ; then
     popd > /dev/null
 fi
 
+# Count results
+n_png=$(ls $jobout/*png | wc -l)
+n_pdf=$(ls $jobout/*pdf | wc -l)
+
 # Report results
 if [[ -z $exe_cmd || -n $dry_run ]] ; then
+    if (( $n_png == 0 || $n_pdf == 0 )) ; then
+	(( $n_png == 0)) && echo $tag: "ERROR: No png-plots produced in: $jobout"
+	(( $n_pdf == 0)) && echo $tag: "ERROR: No pdf-plots produced in: $jobout"
+	exit 1
+    fi
     echo $tag: "Plots produced:"
     ls $jobout/*png | head -n 3
-    echo "... ($(ls $jobout/*png | wc -l) png-files)"
-    ls $jobout/*pdf
+    echo ...
+    ls $jobout/*pdf | head -n 3
+    echo ...
+    echo "Produced $n_png png-files and $n_pdf pdf-files"
 fi
 
 # End of script

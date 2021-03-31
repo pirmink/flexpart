@@ -31,11 +31,12 @@
 # Template:
 #   "<description> in: <path>"
 # Allowed placeholders: not supported
+# Keyword global in description makes resolution default: global
+# Keyword Europe in description makes resolution default: europe
 # ECMWF IFS-HRES
 nwp_source_list=( \
     "Operational cache global 3-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-GLOBAL" \
     "Operational cache Europe 1-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-EUROPE" \
-    "Operational cache on escha/kesch in: /opr/owm/cache/FLEXPART-IFS"             \
     "User cache                       in: /scratch/$LOGNAME/FLEXPART-IFS"          \
     )
 # Flexpart environment file
@@ -66,8 +67,6 @@ rel_tag=goe2
 
 # Defaults for options
 # --------------------
-# Resolution (-r, --resol)
-resol=global
 # Flexpart executable (-e, --exe-tag)
 # should agree with Makefile variables EXEDIR, EXECUTABLE
 exe_path=$(dirname $PWD)/src
@@ -371,35 +370,6 @@ if [[ -z $job_name ]] ; then
 fi
 echo $tag: "Job tag: $job_name"
 
-# Resolution
-# Define start of grib file name of mother and nested domains
-case $resol in
-    europe)
-	# Operational configuration summer 2020, mother domain 0.1° Europe, no nest
-	nests=( dispf )
-	;;
-    global)
-	# Operational configuration summer 2020, IFS-HRES 0.5° global, 0.1° Europe
-	nests=( dispc dispf )
-	;;
-    h1)
-	# Obsolete configuration, IFS-HRES 1° global, 0.1° Europe
-	nests=( dispc dispf )
-	;;
-    h05)
-	# Operational configuration, IFS-HRES 0.5° global, 0.1° Europe
-	nests=( dispc dispf )
-	;;
-    h01)
-	# Test configuration, mother domain 0.1° Europe, no nest
-	nests=( dispf )
-	;;
-    *)
-	echo $tag: "Unknown resolution: $resol"
-	exit 4
-	;;
-esac
-
 # Option --partition
 if [[ -z $partition ]] ; then
     # Default depends on run_mode
@@ -470,11 +440,9 @@ release_start=( $(date --utc +"%Y%m%d %H%M%S" \
   release_end=( $(date --utc +"%Y%m%d %H%M%S" \
 	               --date="${basetime:0:8} ${basetime:8:2} $t2 hours") )
 
-# Retrieve NWP input data
-# -----------------------
-
 # Select NWP data source
 # ----------------------
+# Affects default for resolution
 if [[ -z $nwp_source ]] ; then
     if [[ -z $source_no ]] ; then
 	echo "Select NWP data source (option --source-no)"
@@ -499,6 +467,43 @@ if [[ -z $nwp_source ]] ; then
 else
     source_desc=$nwp_source
 fi
+
+# Resolution
+# Default
+if [[ -z $resol ]] ; then
+    [[ $source_desc == *Europe* ]] && resol=europe
+    [[ $source_desc == *global* ]] && resol=global
+fi
+# Define start of grib file name of mother and nested domains
+case $resol in
+    europe)
+	# Operational configuration summer 2020, mother domain 0.1° Europe, no nest
+	nests=( dispf )
+	;;
+    global)
+	# Operational configuration summer 2020, IFS-HRES 0.5° global, 0.1° Europe
+	nests=( dispc dispf )
+	;;
+    h1)
+	# Obsolete configuration, IFS-HRES 1° global, 0.1° Europe
+	nests=( dispc dispf )
+	;;
+    h05)
+	# Operational configuration, IFS-HRES 0.5° global, 0.1° Europe
+	nests=( dispc dispf )
+	;;
+    h01)
+	# Test configuration, mother domain 0.1° Europe, no nest
+	nests=( dispf )
+	;;
+    *)
+	echo $tag: "Unknown resolution: $resol"
+	exit 4
+	;;
+esac
+
+# Retrieve NWP input data
+# -----------------------
 
 # Check if GRIB data available
 if [ ! -d $nwp_source ] ; then

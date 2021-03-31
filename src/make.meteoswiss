@@ -1,55 +1,20 @@
 #!/bin/bash
 
 # Set environment variables and build the Flexpart executable for use by
-# MeteoSwiss on escha/kesch at CSCS
+# MeteoSwiss at CSCS
 
-# To ensure the usage of the variables in the makefile as definded in the
-# environment variables below, overriding the definitions in the makefile itself,
-# make is called with the option --environment-overrides.
-
+# Settings
+# --------
 # Environment file
 flexpart_env=FLEXPART.env
+
 # Makefile
 makefile=makefile.meteoswiss
+# --------
 
 # Load environment
 . $flexpart_env
 
-# Settings in makefile provided as part of the release
-#	ROOT_DIR = /homevip/flexpart/
-
-#	F90	  = /usr/bin/gfortran
-#	MPIF90    = /usr/bin/mpifort
-
-#	INCPATH1  = ${ROOT_DIR}/gcc-5.4.0/include	
-#	INCPATH2  = /usr/include
-#	LIBPATH1 = ${ROOT_DIR}/gcc-5.4.0/lib
-
-# Settings for escha/kesch
-# eccodes definitions using variables set by programming environment
-echo ECCODESROOT=$ECCODESROOT
-export ROOT_DIR=$(dirname $PWD)
-export      F90=gfortran
-export   MPIF90=mpif90
-export INCPATH1=${ECCODESROOT}/include	
-export INCPATH2=${CPATH%%:*}
-export LIBPATH1=${ECCODESROOT}/lib
-export LIBPATH2=${JASPER_DIR}/lib
-export LIBPATH3=${LIBAEC_DIR}/lib
-# Additional compiler flags
-export    FUSER='-finit-local-zero -lpthread'
-
-# Report settings
-echo ROOT_DIR=$ROOT_DIR
-echo      F90=$F90
-echo   MPIF90=$MPIF90
-echo INCPATH1=$INCPATH1
-echo INCPATH2=$INCPATH2
-echo LIBPATH1=$LIBPATH1
-echo LIBPATH2=$LIBPATH2
-echo LIBPATH3=$LIBPATH3
-echo    FUSER=$FUSER
-
-# Build application using above settings
-echo Builing application using default makefile with above settings ...
-make -f $makefile --environment-overrides $@ ncf=yes
+# Build application
+echo Builing application using $makefile
+make -f $makefile $@ ncf=yes

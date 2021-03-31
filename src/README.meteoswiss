@@ -33,6 +33,9 @@ For compilation of debugging parallel FLEXPART (see header of makefile)
 ./make.meteoswiss mpi-dbg
 
 
+Running
+-------
+
 Commands to run the compiled executable:
 
 # To run flexpart, it is necessary to unlimit the stacksize
@@ -41,5 +44,8 @@ ulimit -s unlimited
 # Run flexpart
 ./FP_ecmwf_gfortran
 
+
+Testing
+-------
 # A script for the preparation of the input files from the MeteoSwiss archive is
-# available in ../test/test-run. Use it with option -h to get a short help.
+# available in ../test/test-fp. Use it with option -h to get a short help.
