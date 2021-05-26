@@ -3,8 +3,8 @@
 #
 # Description:
 #
-#   Calculate dispersion using an IFS-HRES forecast
-#   -----------------------------------------------
+#   Calculate dispersion using a NWP forecast
+#   -----------------------------------------
 #
 #   Checks files on disk and retrieves them from cache or store
 #   Creates input and output directories for flexpart
@@ -16,7 +16,7 @@
 # Author: Pirmin Kaufmann, MeteoSwiss
 #
 # Version:
-  revision="1.7 ifs"  #vincr# version number, may be incremented using vincr
+  revision="1.7.1 ifs"  #vincr# version number, may be incremented using vincr
 #
 # See git log for history of modifications
 #-============================================================================
@@ -29,16 +29,66 @@
 # Path to NWP files depending on resolution (see --resol)
 # String is split at " in: "
 # Template:
-#   "<description> in: <path>"
-# Allowed placeholders: not supported
-# Keyword global in description makes resolution default: global
-# Keyword Europe in description makes resolution default: europe
-# ECMWF IFS-HRES
-nwp_source_list=( \
-    "Operational cache global 3-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-GLOBAL" \
-    "Operational cache Europe 1-hrly  in: /opr/osm/cache/LADM/FLEXPART-IFS-EUROPE" \
-    "User cache                       in: /scratch/$LOGNAME/FLEXPART-IFS"          \
-    )
+#   "<description> in: <file-with-path>"
+# Allowed placeholders: <yymmddhh>, <ex>, <ddhh>, <mem>
+# (COSMO models not yet supported by this version of test-fp)
+# COSMO-1E
+nwp_max_range_1e=33
+lt_inc_1e=1
+nwp_source_list_1e=(
+    "Operational LADM cache     in: /opr/osm/cache/LADM/FLEXPART-C1E-CTRL/dispc*"
+    "Operational fcst cache     in: /opr/osm/cache/COSMO-1E/FCST_RING/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
+    "User cache                 in: /scratch/$LOGNAME/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
+    "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/COSMO-1E/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
+)
+# COSMO-2E
+nwp_max_range_2e=120
+lt_inc_2e=1
+nwp_source_list_2e=(
+    "Operational LADM cache     in: *** not available ***"
+    "Operational fcst cache     in: /opr/osm/cache/COSMO-2E/FCST_RING/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
+    "User cache                 in: /scratch/$LOGNAME/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
+    "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/COSMO-2E/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
+)
+
+# Legacy models
+# COSMO-1
+nwp_max_range_1=33
+lt_inc_1=1
+nwp_source_list_1=(
+    "Operational LADM cache     in: *** no longer available ***"
+    "Operational fcst ring      in: *** no longer available ***"
+    "User cache                 in: /scratch/$LOGNAME/<yymmddhh>_1<ex>/lm_coarse/lfff<ddhh>0000"
+    "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/COSMO-1/<yymmddhh>_1<ex>/lm_coarse/lfff<ddhh>0000"
+)
+# COSMO-E
+nwp_max_range_e=120
+lt_inc_e=1
+nwp_source_list_e=(
+    "Operational LADM cache     in: *** no longer available ***"
+    "Operational fcst ring      in: *** no longer available ***"
+    "User cache                 in: /scratch/$LOGNAME/<yymmddhh>_2<ex>/lm_coarse/<mem>/lfff<ddhh>0000"
+    "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/COSMO-E/<yymmddhh>_2<ex>/lm_coarse/<mem>/lfff<ddhh>0000"
+)
+
+# ECMWF models for use with flexpart-ifs
+# ECMWF IFS-HRES Europe
+nwp_max_range_f=92
+lt_inc_f=1
+nwp_source_list_f=(
+    "Operational LADM cache     in: /opr/osm/cache/LADM/FLEXPART-IFS-EUROPE/dispf*"
+    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"
+    "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_Europe/dispc*"
+)
+# ECMWF IFS-HRES global
+nwp_max_range_g=144
+lt_inc_g=3
+nwp_source_list_g=(
+    "Operational LADM cache     in: /opr/osm/cache/LADM/FLEXPART-IFS-GLOBAL/disp*"
+    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"
+    "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_global/disp*"
+)
+
 # Flexpart environment file
 environment_file=$(dirname $PWD)/src/FLEXPART.env
 # Flexpart input file templates
@@ -47,6 +97,8 @@ input_templates=$(dirname $PWD)/options # original options directory
 job_no_file=$HOME/.flexpart_job
 # Root directory for job directories
 job_root=$SCRATCH/flexpart/job
+# File with additional metadata not in nc file (see also pyflexplot_jobout script)
+plot_info_file=plot_info
 # Job file name
 job_file=job
 # Job logfile
@@ -58,35 +110,41 @@ landuse_file=/store/mch/msopr/flexpart_data/IGBP_int1.dat
 # ----------------------
 # Base time
 basetime=$(date --utc --date="00 yesterday" +%Y%m%d%H)           # Yesterday 00 UTC
-# Forecast range
+# Forecast range (automatically reduced if > max_range)
 fc_range=48
 # Simulation mode
 mode=1
-# Tag of RELEASES file (-R, --rel-tag)
-rel_tag=goe2
 
 # Defaults for options
 # --------------------
+# Resolution (-r, --resol)
+resol=f
+# Ensemble members (-m, --member)
+member=000
 # Flexpart executable (-e, --exe-tag)
 # should agree with Makefile variables EXEDIR, EXECUTABLE
 exe_path=$(dirname $PWD)/src
 fp_exe_serial=FLEXPART
 fp_exe_parallel=FLEXPART_MPI
-# Flexpart option (one of -v -v2 -i -i2) and argument (name of pathfile)
+# Flexpart option (--fp-opt)
+# one of -v, -v2, -i, -i2, and argument (name of pathfile)
 fp_opt=
-# Release start and end (h, relative to basetime) (-t, --rel-time)
+# Release start and end (-t, --rel-time)
+# hours relative to basetime
 t1=0
 t2=8
 # Averaging interval and output frequency (-a, --average)
 avg_h=3
-# Run mode serial or parallel
+# Run mode serial or parallel (--run-mode)
 run_mode=serial
 # Partition (-p, --partition)
-# On kesch/escha: one of postproc, pp-long, pp-serial
+# one of postproc, pp-long, pp-serial
 partition_serial=pp-serial
 partition_parallel=postproc
 # Output format (-J, --iout)
 iout=9
+# Tag of RELEASES file (-R, --rel-tag)
+rel_tag=goe2
 #=============================================================================
 # Functions
 #=============================================================================
@@ -127,11 +185,10 @@ Options:
                        (Default: $fp_opt)
   -h, --help           show this help and exit
   -j, --job=NAME       manually set job name (default: consecutive number)
-      --nwp-source=DIR directory with NWP files (precedence over --source-no)
       --parallel       run parallel code
   -J, --iout=I         Set IOUT to I (1 binary, 9 NetCDF output)
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
-  -r, --resol=RESOL    resolution, one of "global", "europe" (default: $resol)
+  -r, --resol=RESOL    resolution, one of f, g (default: $resol)
   -M, --rel-mass=M     released mass(es) [Bq] (default according to RELEASES file)
   -R, --rel-tag=TAG    release tag, selects file RELEASES.TAG (default: $rel_tag)
   -t, --rel-time=T1,T2 release from T1 to T2 (lead times [hours]).
@@ -212,14 +269,6 @@ while (( $# > 0 )) ; do
 	    ;;
 	-n | --dry-run)
 	    dry_run=yes
-	    ;;
-	--nwp-source*)
-	    # Mandatory option argument with or without =
-	    if [[ "$1" == *=* ]] ; then
-		nwp_source="${1#*=}"
-	    else
-		(( $# > 1 )) && shift && nwp_source="$1"
-	    fi
 	    ;;
 	-p | --partition*)
 	    # Mandatory option argument with or without =
@@ -335,6 +384,31 @@ while (( $# > 0 )) ; do
     shift
 done
 
+# Ajust release time and duration
+if ! [[ $t1 =~ ^[0-9]+$ ]] ; then
+    echo $tag: "Release time 1 not valid: >$t1<"
+    exit 4
+fi
+if ! [[ $t2 =~ ^[0-9]+$ ]] ; then
+    echo $tag: "Release time 2 not valid: $t2"
+    exit 5
+fi
+
+# Check time arguments
+eval nwp_max_range=\$nwp_max_range_$resol
+eval lt_inc=\$lt_inc_$resol
+(( $fc_range > $nwp_max_range )) && fc_range=$nwp_max_range
+(( $t1 < 0 )) && t1=0
+(( $t1 > $fc_range )) && t1=$fc_range
+(( $t2 <= $t1 )) && echo $tag: "Error: Release end before release start: $t2 < $t1"
+(( $t2 > $fc_range )) && t2=$fc_range
+
+# Release start and end date/times
+release_start=$(date --utc +"%Y%m%d %H%M%S" \
+	--date="${basetime:0:8} ${basetime:8:2} ${t1} hours")
+  release_end=$(date --utc +"%Y%m%d %H%M%S" \
+	--date="${basetime:0:8} ${basetime:8:2} ${t2} hours")
+
 #=============================================================================
 # Start processing
 #=============================================================================
@@ -440,47 +514,44 @@ release_start=( $(date --utc +"%Y%m%d %H%M%S" \
   release_end=( $(date --utc +"%Y%m%d %H%M%S" \
 	               --date="${basetime:0:8} ${basetime:8:2} $t2 hours") )
 
+# Retrieve NWP input data
+# -----------------------
+
 # Select NWP data source
-# ----------------------
-# Affects default for resolution
-if [[ -z $nwp_source ]] ; then
-    if [[ -z $source_no ]] ; then
-	echo "Select NWP data source (option --source-no)"
-	select answer in "${nwp_source_list[@]}" ; do
-	    # Note: Press return for default not possible
-	    # as select repeats prompt until REPLY is not empty
-	    [[ $REPLY == quit || $REPLY == exit ]] && exit
-	    # answer is only set if REPLY was valid
-	    [[ -n $answer ]] && break
-	done
-	source_no=$REPLY
-	echo "You secected: $answer"
-    else
-	(( i_source = $source_no - 1 ))
-	answer=${nwp_source_list[$i_source]}
-	echo "Selected data source: $answer"
-    fi
-
-    # Extract directory path from nwp_source_list entry
-    nwp_source=${answer#* in: }
-    source_desc=${answer%% in:*}
+eval nwp_source_list=( \"\${nwp_source_list_${resol}[@]}\" )
+if [[ -z $source_no ]] ; then
+    echo "Select NWP data source (option --source-no)"
+    select answer in "${nwp_source_list[@]}" ; do
+	# Note: Press return for default not possible
+	# as select repeats prompt until REPLY is not empty
+	[[ $REPLY == quit || $REPLY == exit ]] && exit
+	# answer is only set if REPLY was valid
+	[[ -n $answer ]] && break
+    done
+    source_no=$REPLY
+    echo "You secected: $answer"
 else
-    source_desc=$nwp_source
+    (( i_source = $source_no - 1 ))
+    answer=${nwp_source_list[$i_source]}
+    echo "Selected data source: $answer"
 fi
 
-# Resolution
-# Default
-if [[ -z $resol ]] ; then
-    [[ $source_desc == *Europe* ]] && resol=europe
-    [[ $source_desc == *global* ]] && resol=global
-fi
+# Extract description and file path from nwp_source_list entry, splitting at "in:"
+source_desc="${answer%in:*}"
+nwp_source="${answer#*in:}"
+# Trim trailing space in source_desc
+source_desc="${source_desc%"${source_desc##*[![:space:]]}"}"
+# Trim leading space in nwp_source
+nwp_source="${nwp_source#"${nwp_source%%[![:space:]]*}"}"
+
+# Nests
 # Define start of grib file name of mother and nested domains
 case $resol in
-    europe)
+    f)
 	# Operational configuration summer 2020, mother domain 0.1° Europe, no nest
 	nests=( dispf )
 	;;
-    global)
+    g)
 	# Operational configuration summer 2020, IFS-HRES 0.5° global, 0.1° Europe
 	nests=( dispc dispf )
 	;;
@@ -502,30 +573,61 @@ case $resol in
 	;;
 esac
 
-# Retrieve NWP input data
-# -----------------------
-
-# Check if GRIB data available
-if [ ! -d $nwp_source ] ; then
-    echo "$tag: NWP source is not a directory: $nwp_source"
-    exit 9
+# Input location for flexpart
+grib_input=$start_location/grib
+if [ -d $grib_input ] ; then
+    echo $tag: "Using existing FLEXPART input directory: $grib_input"
+else
+    echo $tag: "Creating FLEXPART input directory: $grib_input"
+    $exe_cmd mkdir $grib_input
 fi
 
-# Link destination for NWP files
-grib_input=$start_location/grib
+# Replace placeholders
+nwp_search=$(echo "$nwp_source" \
+    | sed "s/<yymmddhh>/${basetime:2:8}/g" \
+    | sed "s/<ex>/??/g" \
+    | sed "s/<ddhh>/[0-9][0-9][0-9][0-9]/g" \
+    | sed "s/<mem>/$member/g")
+# Check if NWP data is available
+nwp_files=( $nwp_search )
+nwp_dir=$(dirname $nwp_files)
+if [ ! -f $nwp_files ] ; then
+    echo $tag: "%ERROR: NWP data not available in: $nwp_files"
+    if [[ $nwp_files == /opr/* && $HOSTNAME != arolla* ]] ; then
+	echo $tag: "For current data on /opr try on arolla"
+    fi
+    exit 7
+fi
+if [[ $nwp_files == *tgz ]] ; then
+    echo $tag: "Unzipping zipped file: $nwp_files"
+    gunzip $nwp_files
+    nwp_files=( ${nwp_files%.tgz} )
+    nwp_dir=$(dirname $nwp_files)
+fi
 
 # Report GRIB data directory
-echo $tag: "Model data source: $nwp_source"
-echo $tag: "Supplying model data for FLEXPART in: $grib_input"
+echo $tag: "NWP data source: $nwp_dir contains ${#nwp_files[*]} files"
+echo $tag: "Supplying input data for FLEXPART in: $grib_input"
 
 # Create input directory, including SPECIES subdirectory
 echo $tag: "Creating flexpart input directory: $flex_input"
 $exe_cmd mkdir -p $flex_input/SPECIES
 
-# Link GRIB directory into job dir
-# Option -T (--no-target-directory) enforces recreation
-# of the last operand even if it is a directory
-$exe_cmd ln -sfT $nwp_source $grib_input
+# Provide NWP data for flexpart
+if (( ${#nwp_files[*]} > $fc_range )) ; then
+    # Link NWP data from nwp_files to grib_input
+    if [[ -z $exe_cmd ]] ; then
+	cp -sf ${nwp_files[@]} $grib_input
+    else
+	# Abbreviated output for command above, show
+	# only first [0] and last [-1] array element
+	$exe_cmd cp -sf ${nwp_files[0]}...${nwp_files[-1]} $grib_input
+    fi
+    $exe_cmd cp -sf $nwp_dir/$grib_const_file $grib_input
+else
+    echo $tag: "ERROR(4): Insufficient number of files: ${#nwp_files[*]}"
+    exit 8
+fi
 
 # Create AVAILABLE files
 # Loop over nests
@@ -759,7 +861,7 @@ if [[ -z $dry_run ]] ; then
     # Job head
     cat > $start_location/$job_file <<EOF
 #!/bin/bash
-#SBATCH --job-name=FP-I${resol:0:1}.$job_name
+#SBATCH --job-name=FLEXP.$job_name
 #SBATCH --output=$start_location/$job_out
 #SBATCH --error=$start_location/$job_out
 #SBATCH --partition=$partition
@@ -792,7 +894,7 @@ logline="$0 $args # $job_name # $tag $basetime $fc_range $mode $rel_tag"
 logline+=" --average=$avg_h --exe=$exe_path/$fp_exe --exe-tag=$exe_tag"
 logline+=" --partition=$partition --resol=$resol"
 logline+=" --species-no=$species_no --rel-mass=$rel_mass --rel-time=$t1,$t2"
-logline+=" --job=$job_name --source-no=$source_no --nwp-source=$nwp_source"
+logline+=" --job=$job_name --source-no=$source_no # (${source_desc% })"
 if [[ -z $dry_run ]] ; then
     echo "$logline # $(date +%F\ %R)" >> $tag.log
 fi

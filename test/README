@@ -11,12 +11,11 @@ Test script to prepare input data and run Flexpart. It
 - Writes a batch job file
 - Submits the job on a queue
 
-See usage and a short help with command:
-  ./test-fp -h
+See usage and a short help with command
 
-For all settings like directories of COSMO output storage, working
-directory for flexpart, default for script arguments see settings
-section of the script.
+  ./test-fp --help
+
+For all settings see settings section of the script.
 
 After running test-fp, change to the newly created job directory
 named 'job/<tag>'. The job tag <tag> is an automatically increased
@@ -24,7 +23,7 @@ number by default, but can be set manually with the option -j.  The
 last used number is stored in $HOME/.flexpart_job, do not modify that
 file unless you know what you are doing!
 
-After the successful execution of FLEXPART, change to the output
+After the successful execution of the job, change to the job output
 directory to plot the result.
 
 
@@ -56,8 +55,10 @@ pyflexplot_jobout --preset=<preset> <jobdir>
 Start pyflexplot_jobout from within the directory "job",
 which contains the job directories <jobdir>.
 
-The plotting can be accelerated by first allocating a slurm partition with several
-parallel processes and run pyflexplot in parallel. E.g. for 10 parallel processes:
+The plotting can be accelerated by first allocating a slurm partition with
+several parallel processes and run pyflexplot in parallel.
+
+Example for 10 parallel processes:
 
 salloc -n 10
 pyflexplot_jobout --ncpus=10 --preset=<preset> <jobdir>
@@ -104,13 +105,13 @@ whether the code is compiled as serial or as parallel code.
 
 Load the necessary modules to run FLEXPART:
 
-source FLEXPART.env
+  source FLEXPART.env
 
 Allocate parallel processes and run FLEXPART in the job directory
 with:
 
-salloc -n 12 # allocate parallel processes
-export OMP_NUM_THREADS=12 # COSMO version only
-ulimit -s unlimited # FLEXPART needs unlimited stacksize
-./FLEXPART
-exit # free allocation
+  salloc -n 10 # allocate 10 parallel processes (COSMO version only)
+  export OMP_NUM_THREADS=10 # OMP to create 10 threads (COSMO version only)
+  ulimit -s unlimited # FLEXPART needs unlimited stacksize
+  ./FLEXPART
+  exit # free allocation
