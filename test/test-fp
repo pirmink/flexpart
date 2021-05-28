@@ -858,6 +858,30 @@ if [[ $run_mode == parallel ]] ; then
     parallel_opt='--ntasks=8'
 fi
 
+# Write plot info
+# ---------------
+if [[ -z $dry_run ]] ; then
+    cat > $flex_output/$plot_info_file <<EOF
+${basetime}
+EOF
+# Note: plot_info file for Lagranto as written by lagranto_[cf] namelist:
+# (would need $(date --utc --date=${basetime:0:8}T${basetime:8:2} +"%F %R %Z") as time string)
+#    cat > plot_info <<EOF
+#
+#Model base time:                            ${LM_YYYY}-${LM_MM}-${LM_DD} ${LM_ZZ}:00 UTC
+#Model name:                                 $LM_NL_F_TTAG
+#North pole longitude:                       $LM_NL_POLLONLM_F
+#North pole latitude:                        $LM_NL_POLLATLM_F
+#Start longitude:                            $LM_NL_STARTLON_TOT_F
+#Start latitude:                             $LM_NL_STARTLAT_TOT_F
+#Increment in longitudinal direction:        $LM_NL_DLONLM_F
+#Increment in latitudinal direction:         $LM_NL_DLATLM_F
+#Number of points in longitudinal direction: $LM_NL_IELM_F
+#Number of points in latitudinal direction:  $LM_NL_JELM_F
+#
+#EOF
+fi
+
 # Write job file
 # --------------
 if [[ -z $dry_run ]] ; then

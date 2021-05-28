@@ -30,38 +30,45 @@ directory to plot the result.
 Plotting with Python script pyflexplot
 --------------------------------------
 
-Make plots from FLEXPART NetCDF output (IOUT=9) using the pyflexplot utility.
+Make plots from FLEXPART NetCDF output (set IOUT=9 in COMMAND) using the Python
+tool pyflexplot.
 
-Standard set of plots are produced with one of the presets
-(use pyflexplot --preset ? to obtain the current list):
+Initialize the environment for Python:
+  source /oprusers/osm/.opr_setup_dir
+  source ${OPR_SETUP_DIR}/.python_base
 
-opr/cosmo-1e/all_???
-opr/cosmo-1e-ctrl/all_???
-opr/ifs-hres-eu/all_???
-opr/ifs-hres/all_???
+Standard set of plots are produced with one of the presets. Obtain available presets with:
+  pyflexplot --preset=?
 
-pyflexplot --preset <preset> --merge-pdfs \
-           --setup infile grid_conc_<YYYYMMDDhhmmss>.nc \
-           --setup base_time <YYYYMMDDhh>
+Set variables for the arguments and options of pyflexplot
+  preset=<preset>  # appropriate preset from the list obtained above
+  job=<job-name>   # job name for which the output should be plotted
+  pushd job/$job/output
+  infile=$(ls *.nc)
+  basetime=$(cat plot_info)
 
-where <preset> is the appropriate preset from the list above,
-      <YYYYMMDDhhmmss> is the reference time of the FLEXPART run, and
-      <YYYYMMDDhh> is the base time of the model run used.
+Run pyflexplot in a parallel environment as a batch job with
+  batchPP -T 10 --reservation redhat79 "pyflexplot \
+    --num-procs=\$SLURM_CPUS_PER_TASK \
+    --preset $preset --merge-pdfs \
+    --setup infile $infile  \
+    --setup base_time $basetime"
 
-Output produced with test-fp can be plotted with the script
+To run the command interacitvely, activate parallel environment with e.g.
+  salloc -c 10
 
-pyflexplot_jobout --preset=<preset> <jobdir>
+then run the above commands starting with the definition of the variables. Use
+the same pyflexplot command as above but remove the backslash in front of
+$SLURM_CPUS_PER_TASK. After the command finishes, exit the parallel environment
+  exit
 
-Start pyflexplot_jobout from within the directory "job",
-which contains the job directories <jobdir>.
+View results
+  evince *.pdf
+  eog *.png
 
-The plotting can be accelerated by first allocating a slurm partition with
-several parallel processes and run pyflexplot in parallel.
+Return to test directory
+  popd
 
-Example for 10 parallel processes:
-
-salloc -n 10
-pyflexplot_jobout --ncpus=10 --preset=<preset> <jobdir>
 
 
 Plotting with IDL runtime script flexplot (obsolete)
