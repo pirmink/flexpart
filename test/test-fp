@@ -129,14 +129,17 @@ fp_exe_parallel=FLEXPART_MPI
 # Flexpart option (--fp-opt)
 # one of -v, -v2, -i, -i2, and argument (name of pathfile)
 fp_opt=
-# Release start and end (-t, --rel-time)
-# hours relative to basetime
+# Run mode serial or parallel (--run-mode)
+run_mode=serial
+# Release start and end (h, relative to basetime) (-t, --rel-time)
 t1=0
 t2=8
 # Averaging interval and output frequency (-a, --average)
 avg_h=3
-# Run mode serial or parallel (--run-mode)
-run_mode=serial
+# Species number (--species-no)
+species_no=16 # Cs-137
+# Total released mass (-M, --rel-mass)
+rel_mass=1.0E09
 # Partition (-p, --partition)
 # one of postproc, pp-long, pp-serial
 partition_serial=pp-serial
@@ -188,15 +191,15 @@ Options:
       --parallel       run parallel code
   -J, --iout=I         Set IOUT to I (1 binary, 9 NetCDF output)
   -p, --partition=P    partition, one of pp (=postproc), debug, normal, dev
-  -r, --resol=RESOL    resolution, one of f, g (default: $resol)
-  -M, --rel-mass=M     released mass(es) [Bq] (default according to RELEASES file)
+  -r, --resol=RESOL    resolution, one of: 1e, 2e, 1, e, f, g; default: $resol
+  -M, --rel-mass=M     released mass [Bq] (default: $rel_mass)
   -R, --rel-tag=TAG    release tag, selects file RELEASES.TAG (default: $rel_tag)
   -t, --rel-time=T1,T2 release from T1 to T2 (lead times [hours]).
                        (Default: $t1,$t2)
       --run-mode=MODE  run code in MODE, either serial or parallel
   -S, --source-no=N    select source no N from list of NWP data sources
-  -N, --species-no=N   select species number(s) (default according to RELEASES file)
-                       species numbers according to definition in ../options/SPECIES
+  -N, --species-no=N   select species no N according to definition
+                       in SPECIES directory
   -s, --stop           stop script before starting job (do not submit job)
   -V, --version        output version information and exit
 
@@ -890,10 +893,11 @@ EOF
 fi
 
 # Add full command to logfile
-logline="$0 $args # $job_name # $tag $basetime $fc_range $mode $rel_tag"
+logline="$0 $args # $job_name # $tag $basetime $fc_range $mode"
 logline+=" --average=$avg_h --exe=$exe_path/$fp_exe --exe-tag=$exe_tag"
 logline+=" --partition=$partition --resol=$resol"
-logline+=" --species-no=$species_no --rel-mass=$rel_mass --rel-time=$t1,$t2"
+logline+=" --species-no=$species_no"
+logline+=" --rel-tag=$rel_tag --rel-mass=$rel_mass --rel-time=$t1,$t2"
 logline+=" --job=$job_name --source-no=$source_no # (${source_desc% })"
 if [[ -z $dry_run ]] ; then
     echo "$logline # $(date +%F\ %R)" >> $tag.log
