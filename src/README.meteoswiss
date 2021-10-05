@@ -22,11 +22,15 @@ For compilation of serial FLEXPART (see header of makefile)
 
   ./make.meteoswiss serial
 
+For compilation of serial FLEXPART for debugging (see header of makefile)
+
+  ./make.meteoswiss serial-dbg
+
 For compilation of parallel FLEXPART (see header of makefile)
 
   ./make.meteoswiss mpi
 
-For compilation of debugging parallel FLEXPART (see header of makefile)
+For compilation of parallel FLEXPART for debugging (see header of makefile)
 
   ./make.meteoswiss mpi-dbg
 

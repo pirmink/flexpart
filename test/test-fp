@@ -26,6 +26,8 @@
 #=============================================================================
 # NWP model data sources
 # ----------------------
+# Load operational definition of OPR_OPR_DIR
+[[ -z $OPR_OPR_DIR ]] && source /oprusers/osm/.opr_setup_dir
 # Path to NWP files depending on resolution (see --resol)
 # String is split at " in: "
 # Template:
@@ -36,8 +38,8 @@
 nwp_max_range_1e=33
 lt_inc_1e=1
 nwp_source_list_1e=(
-    "Operational LADM cache     in: /opr/osm/cache/LADM/FLEXPART-C1E-CTRL/dispc*"
-    "Operational fcst cache     in: /opr/osm/cache/COSMO-1E/FCST_RING/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
+    "Operational LADM cache     in: $OPR_OPR_DIR/cache/LADM/FLEXPART-C1E-CTRL/dispc*"
+    "Operational fcst cache     in: $OPR_OPR_DIR/cache/COSMO-1E/FCST_RING/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
     "User cache                 in: /scratch/$LOGNAME/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/COSMO-1E/<yymmddhh>_4<ex>/cosmo/<mem>/lfff<ddhh>0000"
 )
@@ -46,7 +48,7 @@ nwp_max_range_2e=120
 lt_inc_2e=1
 nwp_source_list_2e=(
     "Operational LADM cache     in: *** not available ***"
-    "Operational fcst cache     in: /opr/osm/cache/COSMO-2E/FCST_RING/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
+    "Operational fcst cache     in: $OPR_OPR_DIR/cache/COSMO-2E/FCST_RING/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
     "User cache                 in: /scratch/$LOGNAME/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/COSMO-2E/<yymmddhh>_5<ex>/cosmo/<mem>/lfff<ddhh>0000"
 )
@@ -76,7 +78,7 @@ nwp_source_list_e=(
 nwp_max_range_f=92
 lt_inc_f=1
 nwp_source_list_f=(
-    "Operational LADM cache     in: /opr/osm/cache/LADM/FLEXPART-IFS-EUROPE/dispf*"
+    "Operational LADM cache     in: $OPR_OPR_DIR/cache/LADM/FLEXPART-IFS-EUROPE/dispf*"
     "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_Europe/dispc*"
 )
@@ -84,7 +86,7 @@ nwp_source_list_f=(
 nwp_max_range_g=144
 lt_inc_g=3
 nwp_source_list_g=(
-    "Operational LADM cache     in: /opr/osm/cache/LADM/FLEXPART-IFS-GLOBAL/disp*"
+    "Operational LADM cache     in: $OPR_OPR_DIR/cache/LADM/FLEXPART-IFS-GLOBAL/disp*"
     "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_global/disp*"
 )
@@ -411,6 +413,16 @@ release_start=$(date --utc +"%Y%m%d %H%M%S" \
 	--date="${basetime:0:8} ${basetime:8:2} ${t1} hours")
   release_end=$(date --utc +"%Y%m%d %H%M%S" \
 	--date="${basetime:0:8} ${basetime:8:2} ${t2} hours")
+
+#===============================================================================
+# Initialize environment
+#===============================================================================
+
+if [[ -z $OPR_OPR_DIR ]] ; then
+    echo $tag: "ERROR: Environment variable OPR_OPR_DIR not defined and" \
+	"unable to source /oprusers/osm/.opr_setup_dir"
+    exit 1
+fi
 
 #=============================================================================
 # Start processing
@@ -934,6 +946,7 @@ if [[ -n $no_submit ]] ; then
     exe_cmd="echo -e \033[07;32m \033[0m "
 else
     echo $tag: "Submitting job: $start_location/$job_file"
+    echo $tag: "  to partition: $partition"
     echo $tag: "Job output: $start_location/$job_out"
 fi
 

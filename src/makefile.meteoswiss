@@ -27,10 +27,13 @@ SHELL = /bin/bash
 #    Compile serial FLEXPART 
 #      make [-j] serial
 #
+#    Compile serial FLEXPART for debugging
+#      make [-j] serial-dbg
+#
 #    Compile parallel FLEXPART 
 #      make [-j] mpi
 #     
-#    Compile for debugging parallel FLEXPART
+#    Compile parallel FLEXPART for debugging
 #      make [-j] mpi-dbg
 #
 #  NETCDF OUTPUT
@@ -51,6 +54,9 @@ FLEXPART-MPI-DBG = DBG_FLEXPART_MPI
 
 # Serial processing executable
 FLEXPART-SERIAL = FLEXPART
+
+# Serial processing executable with debugging info
+FLEXPART-SERIAL-DBG = FLEXPART_DBG
 
 # Settings for CSCS
 F90       = gfortran
@@ -74,14 +80,14 @@ VPATH = gributils/
 
 ## OPTIMIZATION LEVEL
 O_LEV = 0 # [0,1,2,3,g,s,fast]
-O_LEV_DBG = g # [0,g]
+O_LEV_DBG = 0 # [0,g]
 
 ## LIBRARIES
 LIBS = -lm $(NCOPT)
 
 FFLAGS   = -I$(INCPATH1) -I$(INCPATH2) -I${EBROOTNETCDFMINFORTRAN}/include -O$(O_LEV) -g -cpp -m64 -mcmodel=large -fPIC -fconvert=little-endian -frecord-marker=4 -fmessage-length=0 -flto=jobserver -O$(O_LEV) $(NCOPT) $(FUSER)
 
-DBGFLAGS = -I$(INCPATH1) -I$(INCPATH2) -O$(O_LEV_DBG) -g3 -ggdb3 -cpp -m64 -mcmodel=large -fPIC -fconvert=little-endian -frecord-marker=4 -fmessage-length=0 -flto=jobserver -O$(O_LEV_DBG) $(NCOPT) -fbacktrace   -Wall  -fdump-core $(FUSER)  #  -ffpe-trap=invalid,overflow,denormal,underflow,zero  -Warray-bounds -fcheck=all
+DBGFLAGS = -I$(INCPATH1) -I$(INCPATH2) -I${EBROOTNETCDFMINFORTRAN}/include -O$(O_LEV_DBG) -g -ggdb -cpp -m64 -mcmodel=large -fPIC -fconvert=little-endian -frecord-marker=4 -fmessage-length=0 -flto=jobserver -O$(O_LEV_DBG) $(NCOPT) -fbacktrace   -Wall  -fdump-core $(FUSER)  #  -ffpe-trap=invalid,overflow,denormal,underflow,zero  -Warray-bounds -fcheck=all
 
 LDFLAGS  = $(FFLAGS) $(ECCODES_LD_FLAGS) $(JASPER_LD_FLAGS) $(LIBAEC_LD_FLAGS) $(LIBS) 
 LDDEBUG  = $(DBGFLAGS) $(ECCODES_LD_FLAGS) $(JASPER_LD_FLAGS) $(LIBAEC_LD_FLAGS) $(LIBS)
@@ -201,6 +207,12 @@ endif
 serial: $(FLEXPART-SERIAL)
 serial: FC := $(F90)
 
+# serial executable with debugging info
+serial-dbg: $(FLEXPART-SERIAL-DBG)
+serial-dbg: FFLAGS := $(DBGFLAGS)
+serial-dbg: LDFLAGS:= $(LDDEBUG)
+serial-dbg: FC := $(F90)
+
 # parallel processing executable
 mpi: $(FLEXPART-MPI)
 mpi: FC := $(MPIF90)
@@ -212,6 +224,9 @@ mpi-dbg: LDFLAGS:= $(LDDEBUG)
 mpi-dbg: FC := $(MPIF90)
 
 $(FLEXPART-SERIAL): $(MODOBJS) $(OBJECTS) $(OBJECTS_SERIAL)
+	+$(FC) -o $@ $(MODOBJS) $(OBJECTS) $(OBJECTS_SERIAL) $(LDFLAGS)
+
+$(FLEXPART-SERIAL-DBG): $(MODOBJS) $(OBJECTS) $(OBJECTS_SERIAL)
 	+$(FC) -o $@ $(MODOBJS) $(OBJECTS) $(OBJECTS_SERIAL) $(LDFLAGS)
 
 $(FLEXPART-MPI): $(MODOBJS) $(MPI_MODOBJS) $(OBJECTS) $(OBJECTS_MPI)
