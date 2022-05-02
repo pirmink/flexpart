@@ -3,7 +3,8 @@ FP_ecmwf_gfortran*
 *_mod.mod
 class_gribfile.mod
 .DS_Store
+.vscode
 output
 FLEXPART
-FLEXPART_MPI
+FLEXPART_*
 specoverview
