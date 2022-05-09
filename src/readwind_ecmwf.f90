@@ -202,16 +202,17 @@ subroutine readwind_ecmwf(indj,n,uuh,vvh,wwh)
       isec1(6)=167         ! indicatorOfParameter
     elseif ((parCat.eq.0).and.(parNum.eq.6).and.(typSurf.eq.103)) then ! 2D
       isec1(6)=168         ! indicatorOfParameter
-    elseif ((parCat.eq.1).and.(parNum.eq.11).and.(typSurf.eq.1)) then ! SD
+    elseif ((parCat.eq.1).and.(parNum.eq.11).and.(typSurf.eq.1)) then ! SDE
       isec1(6)=141         ! indicatorOfParameter
-      conversion_factor=1000.
+      conversion_factor=10.
+    elseif ((parCat.eq.1).and.(parNum.eq.254).and.(typSurf.eq.1)) then ! SD
+      isec1(6)=141         ! indicatorOfParameter
     elseif ((parCat.eq.6).and.(parNum.eq.1) .or. parId .eq. 164) then ! CC
       isec1(6)=164         ! indicatorOfParameter
     elseif ((parCat.eq.1).and.(parNum.eq.9) .or. parId .eq. 142) then ! LSP
       isec1(6)=142         ! indicatorOfParameter
     elseif ((parCat.eq.1).and.(parNum.eq.10)) then ! CP
       isec1(6)=143         ! indicatorOfParameter
-      conversion_factor=1000.
     elseif ((parCat.eq.0).and.(parNum.eq.11).and.(typSurf.eq.1)) then ! SHF
       isec1(6)=146         ! indicatorOfParameter
     elseif ((parCat.eq.4).and.(parNum.eq.9).and.(typSurf.eq.1)) then ! SR
@@ -324,7 +325,7 @@ subroutine readwind_ecmwf(indj,n,uuh,vvh,wwh)
         if (lsprec(i,j,1,n).lt.0.) lsprec(i,j,1,n)=0.
       endif
       if(isec1(6).eq.143) then                      !! CONVECTIVE PREC.
-        convprec(i,j,1,n)=zsec4(nxfield*(ny-j-1)+i+1)/conversion_factor
+        convprec(i,j,1,n)=zsec4(nxfield*(ny-j-1)+i+1)
         if (convprec(i,j,1,n).lt.0.) convprec(i,j,1,n)=0.
       endif
       if(isec1(6).eq.146) sshf(i,j,1,n)= &!! SENS. HEAT FLUX
