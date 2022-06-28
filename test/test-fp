@@ -94,7 +94,7 @@ nwp_source_list_g=(
 [[ -z ${srun_cmd} ]] && srun_cmd="srun --kill-on-bad-exit"
 [[ -z ${sbatch_cmd} ]] && sbatch_cmd="sbatch"
 [[ -z ${landuse_file} ]] && landuse_file="/store/mch/msopr/flexpart_data/IGBP_int1.dat"
-	_
+
 # Flexpart environment file
 environment_file=$(dirname $PWD)/src/FLEXPART.env
 # Flexpart input file templates
