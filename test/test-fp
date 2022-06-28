@@ -91,6 +91,9 @@ nwp_source_list_g=(
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_global/disp*"
 )
 
+[[ -z ${srun_cmd} ]] && srun_cmd="srun --kill-on-bad-exit"
+[[ -z ${sbatch_cmd} ]] && sbatch_cmd="sbatch"
+
 # Flexpart environment file
 environment_file=$(dirname $PWD)/src/FLEXPART.env
 # Flexpart input file templates
@@ -923,7 +926,7 @@ ulimit -a
 source FLEXPART.env
 
 # Run FLEXPART in case directory
-srun --kill-on-bad-exit $parallel_opt ./$fp_exe $fp_opt
+${srun_cmd} $parallel_opt ./$fp_exe $fp_opt
 EOF
 
 fi
@@ -950,7 +953,7 @@ else
     echo $tag: "Job output: $start_location/$job_out"
 fi
 
-$exe_cmd sbatch $start_location/$job_file
+$exe_cmd ${sbatch_cmd} $start_location/$job_file
 
 # Report full command
 echo $tag: "Completed command:"
