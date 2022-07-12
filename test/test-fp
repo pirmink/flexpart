@@ -91,8 +91,11 @@ nwp_source_list_g=(
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_global/disp*"
 )
 
+# command used to launch an executable for your particular scheduler, e.g. srun, mpirun, etc
 [[ -z ${srun_cmd} ]] && srun_cmd="srun --kill-on-bad-exit"
+# command used to submit a job to your particular scheduler, e.g. sbatch, qsub, etc
 [[ -z ${sbatch_cmd} ]] && sbatch_cmd="sbatch"
+# path to landuse_file 
 [[ -z ${landuse_file} ]] && landuse_file="/store/mch/msopr/flexpart_data/IGBP_int1.dat"
 
 # Flexpart environment file
