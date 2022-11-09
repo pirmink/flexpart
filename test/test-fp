@@ -79,7 +79,7 @@ nwp_max_range_f=92
 lt_inc_f=1
 nwp_source_list_f=(
     "Operational LADM cache     in: $OPR_OPR_DIR/cache/LADM/FLEXPART-IFS-EUROPE/dispf*"
-    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"
+    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS-EUROPE/disp*"
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_Europe/dispc*"
 )
 # ECMWF IFS-HRES global
@@ -87,7 +87,7 @@ nwp_max_range_g=144
 lt_inc_g=3
 nwp_source_list_g=(
     "Operational LADM cache     in: $OPR_OPR_DIR/cache/LADM/FLEXPART-IFS-GLOBAL/disp*"
-    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS"
+    "User cache                 in: /scratch/$LOGNAME/FLEXPART-IFS-GLOBAL/disp*"
     "Cases in user store        in: /store/mch/msopr/$LOGNAME/CASES/IFS-HRES_global/disp*"
 )
 
@@ -612,7 +612,7 @@ nwp_search=$(echo "$nwp_source" \
 nwp_files=( $nwp_search )
 nwp_dir=$(dirname $nwp_files)
 if [ ! -f $nwp_files ] ; then
-    echo $tag: "%ERROR: NWP data not available in: $nwp_files"
+    echo $tag: "%ERROR: No matching files found: $nwp_files"
     if [[ $nwp_files == /opr/* && $HOSTNAME != arolla* ]] ; then
 	echo $tag: "For current data on /opr try on arolla"
     fi
